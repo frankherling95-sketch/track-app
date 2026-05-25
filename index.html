@@ -433,7 +433,13 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 .type-dividend_correction { background:rgba(245,194,91,.14); color:var(--gold); }
 .type-currency_conversion { background:rgba(155,123,255,.14); color:#9B7BFF; }
 .type-macro { background:rgba(15,27,61,.08); color:var(--text); }
+.type-custom { background:rgba(0,229,176,.14); color:var(--success); }
 .macro-icon { width:28px; height:28px; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; background:var(--surface2); }
+.custom-icon { width:28px; height:28px; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; background:var(--mint-soft); }
+.emoji-grid { display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; margin-top:4px; }
+.emoji-btn { background:var(--surface2); border:1.5px solid transparent; padding:6px; font-size:18px; border-radius:6px; cursor:pointer; }
+.emoji-btn:hover { background:var(--surface3); }
+.emoji-btn.active { background:var(--mint-soft); border-color:var(--mint); }
 .type-earnings { background:rgba(155,123,255,.14); color:#9B7BFF; }
 .type-cmd { background:rgba(91,184,245,.14); color:var(--sky); }
 .type-agm { background:rgba(216,91,184,.14); color:#D85BB8; }
@@ -956,6 +962,31 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   </div>
 </div>
 
+<!-- Custom event modal -->
+<div class="modal-bg" id="evtModal" onclick="if(event.target===this)closeCustomEventModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="evtModalTitle">Nieuw event</div>
+      <button class="modal-close" onclick="closeCustomEventModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-grid">
+      <div class="full"><label>Titel</label><input class="input" id="evtTitle" placeholder="bv. Portfolio review, Belastingaangifte, Inleg-moment"></div>
+      <div><label>Datum</label><input class="input" type="date" id="evtDate"></div>
+      <div><label>Gekoppelde ticker (optioneel)</label><input class="input" id="evtTicker" placeholder="bv. AAPL"></div>
+      <div class="full"><label>Emoji / icoon</label>
+        <input class="input" id="evtEmoji" maxlength="2" placeholder="📌">
+        <div class="emoji-grid" id="evtEmojiGrid"></div>
+      </div>
+      <div class="full"><label>Notitie (optioneel)</label><textarea class="textarea" id="evtNote" rows="3" placeholder="Vrije tekst..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="evtDeleteBtn" onclick="deleteCustomEvent()">Verwijderen</button>
+      <button class="btn" onclick="closeCustomEventModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveCustomEvent()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <!-- Timetravel popover -->
 <div class="modal-bg" id="ttModal" onclick="if(event.target===this)closeTtModal()">
   <div class="modal" style="max-width:380px;">
@@ -1108,6 +1139,7 @@ function initState() {
   if (!rawState.dividends) rawState.dividends = [];
   if (!rawState.tickers) rawState.tickers = [];
   if (!rawState.strategies) rawState.strategies = DEFAULT_STRATEGIES.slice();
+  if (!rawState.events) rawState.events = [];
   if (!rawState.settings) rawState.settings = { theme: 'auto', baseCurrency: 'EUR' };
   if (!rawState.settings.baseCurrency) rawState.settings.baseCurrency = 'EUR';
   if (!rawState.settings.theme) rawState.settings.theme = 'auto';
@@ -2324,7 +2356,7 @@ const ROUTES = {
   portfolio:   { title: 'Portefeuille', render: renderPortfolio,    actions: () => '' },
   performance: { title: 'Rendement',    render: renderPerformance,  actions: () => '' },
   dividend:    { title: 'Dividend',     render: renderDividends,    actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Toevoegen</button>` },
-  calendar:    { title: 'Agenda',       render: renderCalendar,     actions: () => '' },
+  calendar:    { title: 'Agenda',       render: renderCalendar,     actions: () => `<button class="btn btn-primary" onclick="openCustomEventModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuw event</button>` },
   actions:     { title: 'Mutaties',     render: renderTransactions, actions: () => `<button class="btn btn-primary" onclick="openTxModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe mutatie</button>` },
   /* Secondary routes (accessible via gear menu) */
   holdings:    { title: 'Posities',    render: renderHoldings,     actions: () => '' },
@@ -2421,6 +2453,55 @@ function updateTtButton() {
     btn.style.borderColor = '';
     btn.style.fontWeight = '';
   }
+}
+
+/* Custom calendar events CRUD */
+const EVT_EMOJI_PRESETS = ['📌','📝','⏰','🎯','💰','📊','📅','💡','⚠️','🎉','🏦','📈','📉','🔔','🚀','✅'];
+let _editingEvtId = null;
+function openCustomEventModal(id = null) {
+  _editingEvtId = id;
+  const ev = id ? rawState.events.find(e => e.id === id) : null;
+  document.getElementById('evtModalTitle').textContent = ev ? 'Event bewerken' : 'Nieuw event';
+  document.getElementById('evtTitle').value = ev?.title || '';
+  document.getElementById('evtDate').value = ev?.date || todayISO();
+  document.getElementById('evtTicker').value = ev?.tickerSymbol || '';
+  document.getElementById('evtEmoji').value = ev?.emoji || '📌';
+  document.getElementById('evtNote').value = ev?.note || '';
+  document.getElementById('evtDeleteBtn').classList.toggle('hidden', !ev);
+  /* Emoji grid */
+  document.getElementById('evtEmojiGrid').innerHTML = EVT_EMOJI_PRESETS.map(e => `<button class="emoji-btn ${ev?.emoji === e || (!ev && e === '📌') ? 'active' : ''}" onclick="pickEvtEmoji('${e}')">${e}</button>`).join('');
+  document.getElementById('evtModal').classList.add('open');
+  setTimeout(() => document.getElementById('evtTitle').focus(), 50);
+}
+function pickEvtEmoji(em) {
+  document.getElementById('evtEmoji').value = em;
+  document.querySelectorAll('#evtEmojiGrid .emoji-btn').forEach(b => b.classList.toggle('active', b.textContent === em));
+}
+function closeCustomEventModal() { document.getElementById('evtModal').classList.remove('open'); _editingEvtId = null; }
+function saveCustomEvent() {
+  const title = document.getElementById('evtTitle').value.trim();
+  const date = document.getElementById('evtDate').value;
+  if (!title || !date) { appToast('Titel en datum zijn verplicht', { type: 'error' }); return; }
+  const data = {
+    title, date,
+    tickerSymbol: document.getElementById('evtTicker').value.trim().toUpperCase(),
+    emoji: document.getElementById('evtEmoji').value.trim() || '📌',
+    note: document.getElementById('evtNote').value.trim(),
+    portfolioId: rawState.activePortfolioId
+  };
+  if (_editingEvtId) {
+    Object.assign(rawState.events.find(e => e.id === _editingEvtId), data);
+  } else {
+    rawState.events.push({ id: uid(), ...data, createdAt: new Date().toISOString() });
+  }
+  scheduleSave(); closeCustomEventModal(); renderAll();
+  appToast('Event opgeslagen');
+}
+function deleteCustomEvent() {
+  if (!_editingEvtId) return;
+  if (!confirm('Event verwijderen?')) return;
+  rawState.events = rawState.events.filter(e => e.id !== _editingEvtId);
+  scheduleSave(); closeCustomEventModal(); renderAll();
 }
 
 /* Strategy CRUD */
@@ -3710,6 +3791,7 @@ let _calView = 'month'; /* 'week' or 'month' */
 let _calRef = new Date(); _calRef.setHours(0, 0, 0, 0);
 let _calEventsEnabled = new Set(CAL_EVENT_TYPES.map(t => t.key)); /* ticker events default on */
 let _calMacroEnabled = new Set(); /* macro events default off */
+let _calCustomEnabled = true; /* custom events default on */
 
 function calShift(delta) {
   if (_calView === 'week') _calRef.setDate(_calRef.getDate() + delta * 7);
@@ -3730,6 +3812,10 @@ function openCalFilterSheet() {
       <span class="col-pick-label">${escapeHtml(t.label)}</span>
     </div>
   `).join('');
+  const customRow = `<div class="col-pick-item ${_calCustomEnabled ? 'checked' : ''}" data-evt="__custom" data-kind="custom" onclick="this.classList.toggle('checked')">
+    <span class="col-pick-cb"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 8l3 3 7-7"/></svg></span>
+    <span class="col-pick-label">📌 Eigen events (${(rawState.events || []).filter(e => e.portfolioId === rawState.activePortfolioId).length})</span>
+  </div>`;
   const macroHead = `<div style="padding:10px 8px 4px; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:.4px;">Macro events</div>`;
   const macroEvts = CAL_MACRO_TYPES.map(t => `
     <div class="col-pick-item ${_calMacroEnabled.has(t.key) ? 'checked' : ''}" data-evt="${t.key}" data-kind="macro" onclick="this.classList.toggle('checked')">
@@ -3737,7 +3823,7 @@ function openCalFilterSheet() {
       <span class="col-pick-label">${t.icon} ${escapeHtml(t.label)}</span>
     </div>
   `).join('');
-  document.getElementById('calFilterBody').innerHTML = tickerEvts + macroHead + macroEvts;
+  document.getElementById('calFilterBody').innerHTML = tickerEvts + customRow + macroHead + macroEvts;
 }
 function closeCalFilterSheet() { document.getElementById('calFilterSheet').classList.remove('open'); }
 function resetCalFilterSheet() {
@@ -3749,6 +3835,7 @@ function saveCalFilterSheet() {
   const checked = [...document.querySelectorAll('#calFilterBody .col-pick-item.checked')];
   _calEventsEnabled = new Set(checked.filter(el => el.dataset.kind === 'ticker').map(el => el.dataset.evt));
   _calMacroEnabled  = new Set(checked.filter(el => el.dataset.kind === 'macro').map(el => el.dataset.evt));
+  _calCustomEnabled = checked.some(el => el.dataset.kind === 'custom');
   closeCalFilterSheet();
   renderCalendar();
 }
@@ -3801,6 +3888,20 @@ function renderCalendar() {
       .filter(e => _calMacroEnabled.has(e.type.key))
       .forEach(e => events.push({ date: e.date, dt: e.dt, type: e.type, ticker: null, amount: 0, macro: true }));
   }
+  /* Custom (user-added) events */
+  if (_calCustomEnabled) {
+    (rawState.events || []).filter(e => e.portfolioId === rawState.activePortfolioId).forEach(e => {
+      if (!e.date) return;
+      const d = new Date(e.date);
+      if (d < rangeStart || d >= rangeEnd) return;
+      const tk = e.tickerSymbol ? getTicker(e.tickerSymbol) : null;
+      events.push({
+        date: e.date, dt: d,
+        type: { key: 'custom', label: e.title, shortLabel: 'Eigen', cls: 'type-custom', icon: e.emoji || '📌' },
+        ticker: tk, amount: 0, custom: true, customId: e.id, note: e.note
+      });
+    });
+  }
   events.sort((a, b) => a.date.localeCompare(b.date));
   /* Group by week */
   const weeks = new Map();
@@ -3850,20 +3951,28 @@ function renderCalendar() {
             <span>${rangeStr}</span>
             <span class="cal-week-num">W${wk}</span>
           </div>
-          ${items.map(e => `
-            <div class="cal-day-row ${isToday(e.dt) ? 'today' : ''}">
+          ${items.map(e => {
+            const iconCell = e.macro ? `<div class="macro-icon">${e.type.icon}</div>`
+              : e.custom ? `<div class="custom-icon">${e.type.icon}</div>`
+              : brandLogoHTML(e.ticker);
+            const nameCell = e.macro ? escapeHtml(e.type.label)
+              : e.custom ? `${escapeHtml(e.type.label)}${e.ticker ? `<div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">${escapeHtml(e.ticker.symbol)}</div>` : ''}${e.note ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${escapeHtml(e.note)}</div>` : ''}`
+              : escapeHtml(e.ticker.name || e.ticker.symbol) + `<div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">${escapeHtml(e.ticker.symbol)}</div>`;
+            const clickHandler = e.custom ? `onclick="openCustomEventModal('${e.customId}')" style="cursor:pointer"` : '';
+            return `
+            <div class="cal-day-row ${isToday(e.dt) ? 'today' : ''}" ${clickHandler}>
               <div class="cal-day-label">
                 <div class="cal-day-label-num">${e.dt.getDate()}</div>
                 <div>${e.dt.toLocaleDateString('nl-NL', { weekday: 'short' })}</div>
               </div>
-              ${e.macro ? `<div class="macro-icon">${e.type.icon}</div>` : brandLogoHTML(e.ticker)}
-              <div class="cal-day-name">${e.macro ? escapeHtml(e.type.label) : escapeHtml(e.ticker.name || e.ticker.symbol) + `<div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">${escapeHtml(e.ticker.symbol)}</div>`}</div>
+              ${iconCell}
+              <div class="cal-day-name">${nameCell}</div>
               <div class="cal-day-ev-type" style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
                 <span class="type-pill ${e.type.cls}">${e.type.shortLabel}</span>
-                ${e.amount > 0 ? `<span class="text-mono" style="font-size:11px; color:var(--success);">≈ ${fmtNum(e.amount, 2)} ${escapeHtml(e.ticker.currency || '')}</span>` : ''}
+                ${e.amount > 0 && e.ticker ? `<span class="text-mono" style="font-size:11px; color:var(--success);">≈ ${fmtNum(e.amount, 2)} ${escapeHtml(e.ticker.currency || '')}</span>` : ''}
               </div>
             </div>
-          `).join('')}
+          `;}).join('')}
         </div>`;
       }).join('')}
     </div>
