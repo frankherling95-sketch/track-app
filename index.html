@@ -1660,7 +1660,26 @@ const PORT_BREAKDOWNS = [
 let _portBreakdown = 'sector';
 let _portHidden = new Set();
 let _portSort = { key: 'worth', dir: 'desc' };
+let _portScope = 'stocks'; /* 'stocks' or 'crypto' */
 const LS_PORT_COLUMNS = 'herling_dividend_port_columns';
+
+function setPortScope(s) { _portScope = s; renderAll(); }
+
+function scopedHoldings() {
+  const all = computeHoldings();
+  if (_portScope === 'crypto') return all.filter(h => isCrypto(getTicker(h.ticker) || { symbol: h.ticker }));
+  return all.filter(h => !isCrypto(getTicker(h.ticker) || { symbol: h.ticker }));
+}
+
+function renderPortScopeToggle() {
+  const all = computeHoldings();
+  const cryptoCount = all.filter(h => isCrypto(getTicker(h.ticker) || { symbol: h.ticker })).length;
+  const stockCount = all.length - cryptoCount;
+  return `<div class="seg">
+    <button class="seg-btn ${_portScope === 'stocks' ? 'active' : ''}" onclick="setPortScope('stocks')">Aandelen <span class="text-mono" style="opacity:.7;">${stockCount}</span></button>
+    <button class="seg-btn ${_portScope === 'crypto' ? 'active' : ''}" onclick="setPortScope('crypto')">Crypto <span class="text-mono" style="opacity:.7;">${cryptoCount}</span></button>
+  </div>`;
+}
 
 function valueOfHolding(h, tk) {
   const fx = tk ? fxForCurrency(tk.currency) : 1;
@@ -1736,7 +1755,7 @@ function renderPortfolio() {
     </div>
     <div class="port-section">
       <div class="sec-tbl-head">
-        <div class="sec-tbl-head-title">Effecten <span class="text-muted" style="font-weight:500;font-size:13px;font-family:var(--font-mono);">${computeHoldings().length}</span></div>
+        <div class="sec-tbl-head-title">${_portScope === 'crypto' ? 'Crypto' : 'Effecten'} <span class="text-muted" style="font-weight:500;font-size:13px;font-family:var(--font-mono);">${scopedHoldings().length}</span></div>
         <button class="sec-tbl-cols-btn" onclick="openColPicker()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
           Kolommen
@@ -1754,7 +1773,7 @@ function renderPortBreakdownDonutAndLegend() {
   const legend = document.getElementById('portLegend');
   if (!donut || !legend) return;
   const bd = PORT_BREAKDOWNS.find(x => x.key === _portBreakdown);
-  const holdings = computeHoldings();
+  const holdings = scopedHoldings();
   if (!holdings.length) {
     donut.innerHTML = '<div class="empty" style="padding:20px;">Geen posities</div>';
     legend.innerHTML = '';
@@ -1816,8 +1835,8 @@ function renderSecTable() {
   const wrap = document.getElementById('secTblWrap');
   if (!wrap) return;
   const cols = getPortColumns().map(k => SEC_COLUMNS.find(c => c.key === k)).filter(Boolean);
-  const holdings = computeHoldings();
-  const closed = computeClosedHoldings();
+  const holdings = scopedHoldings();
+  const closed = computeClosedHoldings().filter(h => _portScope === 'crypto' ? isCrypto({ symbol: h.ticker }) : !isCrypto({ symbol: h.ticker }));
   if (!holdings.length && !closed.length) {
     wrap.innerHTML = `<div class="empty" style="padding:30px;">
       <div class="empty-title">Geen posities</div>
@@ -2391,6 +2410,11 @@ const STATIC_TICKER_META = {
   NKE:   { sector:'Consumer Discretionary', industry:'Apparel', country:'US', type:'stock' },
   HD:    { sector:'Consumer Discretionary', industry:'Home Improvement', country:'US', type:'stock' },
   LOW:   { sector:'Consumer Discretionary', industry:'Home Improvement', country:'US', type:'stock' },
+  /* User's additional TR tickers */
+  SHOP:  { sector:'Technology', industry:'E-commerce Software', country:'CA', type:'stock' },
+  'SIVE.ST':  { sector:'Technology', industry:'Semiconductors', country:'SE', type:'stock' },
+  MU:    { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  ANET:  { sector:'Technology', industry:'Networking Hardware', country:'US', type:'stock' },
   /* Dividend / banks / healthcare */
   JPM:   { sector:'Financials', industry:'Banks', country:'US', type:'stock' },
   BAC:   { sector:'Financials', industry:'Banks', country:'US', type:'stock' },
@@ -2422,6 +2446,11 @@ const STATIC_TICKER_META = {
   'IPRV.AS':  { sector:'ETF', industry:'Listed Private Equity', country:'IE', type:'etf' },
   'IPRP.AS':  { sector:'ETF', industry:'Listed Private Equity', country:'IE', type:'etf' },
   'TDIV.AS':  { sector:'ETF', industry:'Dividend (Developed)', country:'NL', type:'etf' },
+  'NL0011683594.SG': { sector:'ETF', industry:'Dividend (Developed)', country:'NL', type:'etf' },
+  'WPAI.SW':  { sector:'ETF', industry:'AI / Robotics', country:'IE', type:'etf' },
+  'WPAI.L':   { sector:'ETF', industry:'AI / Robotics', country:'IE', type:'etf' },
+  'IPRA.AS':  { sector:'ETF', industry:'Listed Private Equity', country:'IE', type:'etf' },
+  'IPRA.L':   { sector:'ETF', industry:'Listed Private Equity', country:'IE', type:'etf' },
   'IEUR.AS':  { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
   'IMAE.AS':  { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
   'IMAE.L':   { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
@@ -2683,7 +2712,7 @@ function portfolioStats() {
 
 /* Primary routes (top nav + bottom tab). Aliases voor oude hash-namen. */
 const ROUTES = {
-  portfolio:   { title: 'Portefeuille', render: renderPortfolio,    actions: () => '' },
+  portfolio:   { title: 'Portefeuille', render: renderPortfolio,    actions: () => renderPortScopeToggle() },
   performance: { title: 'Rendement',    render: renderPerformance,  actions: () => '' },
   dividend:    { title: 'Dividend',     render: renderDividends,    actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Toevoegen</button>` },
   calendar:    { title: 'Agenda',       render: renderCalendar,     actions: () => `<button class="btn btn-primary" onclick="openCustomEventModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuw event</button>` },
