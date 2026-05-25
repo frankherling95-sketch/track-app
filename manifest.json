@@ -1,0 +1,19 @@
+{
+  "name": "Herling Dividend Tracker",
+  "short_name": "Dividends",
+  "description": "Portfolio & dividend tracker — transacties, dividenden, projecties",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F1B3D",
+  "theme_color": "#0F1B3D",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "dividend-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

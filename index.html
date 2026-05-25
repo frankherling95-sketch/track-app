@@ -1,0 +1,2444 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0F1B3D">
+<title>Herling Dividend Tracker</title>
+<link rel="icon" type="image/svg+xml" href="dividend-icon.svg">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─────────── Tokens & theme ─────────── */
+:root {
+  --navy:#0F1B3D; --navy-dark:#0A1330;
+  --teal:#0D3D3A; --mint:#00E5B0;
+  --mint-soft:rgba(0,229,176,0.12); --mint-glow:rgba(0,229,176,0.25);
+  --gold:#F5C25B; --rose:#E96A6A; --sky:#5BB8F5;
+  --bg:#DDE4EB; --surface:#FFFFFF; --surface2:#F1F4F8; --surface3:#E5EAF0;
+  --border:rgba(15,27,61,0.12); --border-strong:rgba(15,27,61,0.22);
+  --text:#0F1B3D; --text-muted:#5A6678; --text-hint:#8A95A6;
+  --accent:#0F1B3D; --danger:#E96A6A; --success:#00B57E;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-display:'Archivo','Inter',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --shadow-sm:0 1px 2px rgba(15,27,61,0.06);
+  --shadow:0 4px 12px rgba(15,27,61,0.08);
+  --shadow-lg:0 12px 32px rgba(15,27,61,0.16);
+  --radius:10px; --radius-lg:14px;
+}
+:root[data-theme="dark"] {
+  --bg:#0A1330; --surface:#0F1B3D; --surface2:#152448; --surface3:#1B2D58;
+  --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.18);
+  --text:#E8EDF5; --text-muted:#A0AABF; --text-hint:#6B7790;
+  --accent:#00E5B0;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.3);
+  --shadow:0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg:0 12px 32px rgba(0,0,0,0.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg:#0A1330; --surface:#0F1B3D; --surface2:#152448; --surface3:#1B2D58;
+    --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.18);
+    --text:#E8EDF5; --text-muted:#A0AABF; --text-hint:#6B7790;
+    --accent:#00E5B0;
+  }
+}
+
+/* ─────────── Base ─────────── */
+*,*::before,*::after { box-sizing:border-box; }
+html,body { margin:0; padding:0; height:100%; }
+body { font-family:var(--font-sans); background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+button { font-family:inherit; }
+
+/* ─────────── App shell ─────────── */
+.app { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+.sidebar {
+  background:var(--navy); color:#E8EDF5; padding:18px 14px;
+  display:flex; flex-direction:column; gap:14px;
+  border-right:1px solid var(--border);
+  position:sticky; top:0; height:100vh;
+}
+.sb-brand { display:flex; align-items:center; gap:10px; padding:4px 6px 8px; }
+.sb-brand img { width:36px; height:36px; border-radius:8px; }
+.sb-brand-text { font-family:var(--font-display); font-weight:800; font-size:15px; letter-spacing:.2px; }
+.sb-brand-sub { font-size:11px; color:rgba(232,237,245,.6); font-weight:500; }
+
+.sb-pf-select { background:var(--navy-dark); border:1px solid rgba(255,255,255,.08); color:#E8EDF5; border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit; cursor:pointer; }
+.sb-pf-select:focus-visible { outline:2px solid var(--mint); outline-offset:1px; }
+
+.nav-list { display:flex; flex-direction:column; gap:2px; flex:1; }
+.nav-item {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-radius:8px; color:rgba(232,237,245,.78); cursor:pointer;
+  font-size:13px; font-weight:500; transition:background .15s, color .15s;
+  border-left:3px solid transparent; margin-left:-3px;
+  text-decoration:none;
+}
+.nav-item:hover { background:rgba(255,255,255,.04); color:#fff; }
+.nav-item.active { background:rgba(0,229,176,.08); color:#fff; border-left-color:var(--mint); font-weight:600; }
+.nav-item svg { width:18px; height:18px; flex-shrink:0; }
+.nav-badge { margin-left:auto; background:rgba(255,255,255,.08); color:rgba(232,237,245,.85); padding:1px 7px; border-radius:10px; font-size:11px; font-weight:600; font-family:var(--font-mono); }
+.nav-item.active .nav-badge { background:var(--mint); color:var(--navy); }
+
+.sb-foot { display:flex; flex-direction:column; gap:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.06); }
+.sb-sync { display:flex; align-items:center; gap:8px; font-size:11px; color:rgba(232,237,245,.6); padding:6px 8px; }
+.sb-sync-dot { width:8px; height:8px; border-radius:50%; background:#6B7790; }
+.sb-sync.idle .sb-sync-dot { background:#6B7790; }
+.sb-sync.saving .sb-sync-dot { background:var(--gold); animation:pulse 1.2s infinite; }
+.sb-sync.saved .sb-sync-dot { background:var(--mint); }
+.sb-sync.error .sb-sync-dot { background:var(--rose); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.sb-btn { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); color:rgba(232,237,245,.85); padding:7px 10px; border-radius:8px; font-size:12px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:8px; }
+.sb-btn:hover { background:rgba(255,255,255,.08); color:#fff; }
+
+/* ─────────── Main column ─────────── */
+.main { display:flex; flex-direction:column; min-width:0; }
+.topbar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:14px 24px; display:flex; align-items:center; gap:16px;
+  position:sticky; top:0; z-index:20;
+}
+.topbar-title { font-family:var(--font-display); font-weight:700; font-size:18px; flex:1; }
+.topbar-sub { font-size:12px; color:var(--text-muted); font-weight:500; }
+
+.content { padding:24px; max-width:1400px; width:100%; margin:0 auto; flex:1; }
+
+/* ─────────── Buttons & inputs ─────────── */
+.btn { display:inline-flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border-strong); color:var(--text); padding:8px 14px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background .15s, border-color .15s; }
+.btn:hover { background:var(--surface2); }
+.btn:focus-visible { outline:2px solid var(--mint); outline-offset:2px; }
+.btn-primary { background:var(--mint); border-color:var(--mint); color:var(--navy); font-weight:600; }
+.btn-primary:hover { background:var(--mint); transform:translateY(-1px); box-shadow:0 4px 16px var(--mint-glow); }
+.btn-danger { background:transparent; border-color:var(--danger); color:var(--danger); }
+.btn-danger:hover { background:var(--danger); color:#fff; }
+.btn-ghost { background:transparent; border-color:transparent; }
+.btn-ghost:hover { background:var(--surface2); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn svg { width:14px; height:14px; }
+
+.input, .select, .textarea {
+  background:var(--surface); border:1px solid var(--border-strong);
+  color:var(--text); padding:8px 12px; border-radius:8px;
+  font-size:13px; font-family:inherit; width:100%;
+}
+.input:focus, .select:focus, .textarea:focus {
+  outline:none; border-color:var(--mint); box-shadow:0 0 0 3px var(--mint-soft);
+}
+.textarea { resize:vertical; min-height:80px; }
+label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.3px; }
+
+/* ─────────── Cards ─────────── */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow-sm); }
+.card-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.card-title { font-family:var(--font-display); font-weight:700; font-size:15px; flex:1; }
+.card-actions { display:flex; gap:8px; }
+
+/* ─────────── Tables ─────────── */
+.tbl-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow-x:auto; -webkit-overflow-scrolling:touch; box-shadow:var(--shadow-sm); }
+.tbl { width:100%; border-collapse:collapse; font-size:13px; min-width:560px; }
+.tbl th { text-align:left; background:var(--surface2); color:var(--text-muted); font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:.4px; padding:10px 14px; border-bottom:1px solid var(--border); }
+.tbl td { padding:10px 14px; border-bottom:1px solid var(--border); }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:var(--surface2); }
+.tbl .num { font-family:var(--font-mono); text-align:right; }
+.tbl .pos { color:var(--success); font-weight:600; }
+.tbl .neg { color:var(--danger); font-weight:600; }
+.tbl .ticker-cell { font-weight:700; font-family:var(--font-mono); }
+.tbl .type-pill { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+.type-koop { background:rgba(0,181,126,.12); color:var(--success); }
+.type-verkoop { background:rgba(233,106,106,.12); color:var(--danger); }
+.type-dividend { background:var(--mint-soft); color:var(--success); }
+.type-storting { background:rgba(91,184,245,.14); color:var(--sky); }
+.type-opname { background:rgba(245,194,91,.14); color:var(--gold); }
+.type-earnings { background:rgba(155,123,255,.14); color:#9B7BFF; }
+.type-cmd { background:rgba(91,184,245,.14); color:var(--sky); }
+.type-agm { background:rgba(216,91,184,.14); color:#D85BB8; }
+
+.empty {
+  text-align:center; padding:48px 24px; color:var(--text-muted);
+}
+.empty svg { width:48px; height:48px; opacity:.4; margin-bottom:12px; }
+.empty-title { font-weight:600; color:var(--text); margin-bottom:4px; }
+.empty-msg { font-size:13px; }
+
+/* ─────────── Modal ─────────── */
+.modal-bg {
+  position:fixed; inset:0; background:rgba(15,27,61,.5); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+}
+.modal-bg.open { display:flex; }
+.modal {
+  background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg);
+  width:100%; max-width:540px; max-height:90vh; overflow:auto; padding:24px;
+  border:1px solid var(--border);
+}
+.modal-lg { max-width:880px; }
+.modal-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+.modal-title { font-family:var(--font-display); font-weight:700; font-size:18px; flex:1; }
+.modal-close { background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:6px; }
+.modal-close:hover { background:var(--surface2); color:var(--text); }
+.modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.modal-grid .full { grid-column:1/-1; }
+.modal-foot { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+
+/* ─────────── Toast ─────────── */
+.toast-wrap { position:fixed; bottom:24px; right:24px; display:flex; flex-direction:column; gap:8px; z-index:200; }
+.toast {
+  background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--mint);
+  padding:10px 14px; border-radius:8px; box-shadow:var(--shadow-lg);
+  display:flex; align-items:center; gap:10px; font-size:13px;
+  min-width:240px; max-width:360px;
+  animation:slideIn .3s ease;
+}
+.toast.error { border-left-color:var(--rose); }
+.toast.warn { border-left-color:var(--gold); }
+.toast-msg { flex:1; }
+.toast-btn { background:transparent; border:none; color:var(--accent); font-weight:600; cursor:pointer; font-size:12px; padding:2px 6px; }
+@keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* ─────────── Dashboard ─────────── */
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:24px; }
+.kpi {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:18px 20px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden;
+}
+.kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); font-weight:600; margin-bottom:6px; }
+.kpi-value { font-family:var(--font-display); font-size:28px; font-weight:800; line-height:1.1; }
+.kpi-sub { font-size:12px; color:var(--text-muted); margin-top:4px; font-family:var(--font-mono); }
+.kpi-sub.pos { color:var(--success); }
+.kpi-sub.neg { color:var(--danger); }
+.kpi-accent { color:var(--mint); }
+
+.chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:24px; }
+.chart-grid .full { grid-column:1/-1; }
+@media (max-width:900px) { .chart-grid { grid-template-columns:1fr; } }
+
+.chart-wrap { position:relative; }
+.chart-svg { width:100%; height:auto; display:block; }
+.chart-tip {
+  position:absolute; background:var(--navy); color:#fff; padding:6px 10px;
+  border-radius:6px; font-size:12px; pointer-events:none; opacity:0;
+  transition:opacity .15s; white-space:nowrap; z-index:10;
+  font-family:var(--font-mono);
+}
+.chart-tip.show { opacity:1; }
+.legend { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; font-size:12px; }
+.legend-item { display:flex; align-items:center; gap:6px; color:var(--text-muted); }
+.legend-dot { width:10px; height:10px; border-radius:2px; }
+
+/* ─────────── Filter bar ─────────── */
+.filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+.filter-bar .input, .filter-bar .select { width:auto; min-width:140px; }
+.filter-bar .spacer { flex:1; }
+
+/* ─────────── CSV importer ─────────── */
+.csv-drop {
+  border:2px dashed var(--border-strong); border-radius:var(--radius-lg);
+  padding:32px 20px; text-align:center; color:var(--text-muted);
+  cursor:pointer; transition:border-color .15s, background .15s;
+}
+.csv-drop:hover, .csv-drop.dragover { border-color:var(--mint); background:var(--mint-soft); color:var(--text); }
+.csv-drop svg { width:36px; height:36px; opacity:.6; margin-bottom:8px; }
+.csv-preview { margin-top:16px; max-height:300px; overflow:auto; border:1px solid var(--border); border-radius:8px; }
+.csv-preview table { width:100%; border-collapse:collapse; font-size:12px; }
+.csv-preview th { background:var(--surface2); padding:6px 10px; text-align:left; font-weight:600; border-bottom:1px solid var(--border); }
+.csv-preview td { padding:5px 10px; border-bottom:1px solid var(--border); font-family:var(--font-mono); }
+.csv-map { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+
+/* ─────────── Calendar ─────────── */
+.cal-list { display:flex; flex-direction:column; gap:8px; }
+.cal-item {
+  display:grid; grid-template-columns:60px 1fr auto; gap:14px; align-items:center;
+  background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px;
+}
+.cal-date { text-align:center; }
+.cal-date-day { font-family:var(--font-display); font-weight:800; font-size:20px; line-height:1; }
+.cal-date-month { font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:600; letter-spacing:.4px; margin-top:2px; }
+.cal-info-ticker { font-family:var(--font-mono); font-weight:700; font-size:14px; }
+.cal-info-sub { font-size:12px; color:var(--text-muted); }
+.cal-amount { font-family:var(--font-mono); font-weight:700; color:var(--success); }
+
+/* ─────────── Settings ─────────── */
+.settings-row { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); }
+.settings-row:last-child { border-bottom:none; }
+.settings-label { flex:1; }
+.settings-label-title { font-weight:600; font-size:14px; margin-bottom:2px; }
+.settings-label-desc { font-size:12px; color:var(--text-muted); }
+
+.seg { display:inline-flex; background:var(--surface2); border-radius:8px; padding:3px; gap:2px; }
+.seg-btn { background:transparent; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:500; color:var(--text-muted); cursor:pointer; }
+.seg-btn.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow-sm); font-weight:600; }
+
+/* ─────────── Mobile ─────────── */
+@media (max-width:768px) {
+  .app { grid-template-columns:1fr; }
+  .sidebar { position:fixed; left:-260px; top:0; bottom:0; width:240px; z-index:50; transition:left .25s; }
+  .sidebar.open { left:0; box-shadow:var(--shadow-lg); }
+  .topbar { padding:12px 16px; }
+  .content { padding:16px; }
+  .modal-grid { grid-template-columns:1fr; }
+  .topbar-burger { display:inline-flex !important; }
+  .chart-grid { grid-template-columns:1fr; }
+  .kpi-grid { grid-template-columns:1fr 1fr; }
+}
+.topbar-burger { display:none; background:transparent; border:none; padding:6px; cursor:pointer; color:var(--text); }
+.topbar-burger svg { width:22px; height:22px; }
+
+.scrim { position:fixed; inset:0; background:rgba(15,27,61,.4); z-index:40; display:none; }
+.scrim.open { display:block; }
+
+/* utility */
+.hidden { display:none !important; }
+.text-muted { color:var(--text-muted); }
+.text-mono { font-family:var(--font-mono); }
+.flex { display:flex; }
+.gap-2 { gap:8px; }
+.mt-2 { margin-top:8px; }
+.mb-2 { margin-bottom:8px; }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ─────────── Sidebar ─────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <img src="dividend-icon.svg" alt="">
+      <div>
+        <div class="sb-brand-text">Dividends</div>
+        <div class="sb-brand-sub">Herling Analytics</div>
+      </div>
+    </div>
+
+    <select class="sb-pf-select" id="pfSelect" onchange="switchPortfolio(this.value)"></select>
+
+    <nav class="nav-list" id="navList">
+      <a class="nav-item" data-route="dashboard" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item" data-route="transactions" onclick="navigate('transactions')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h13M3 7l4-4M3 7l4 4M21 17H8M21 17l-4-4M21 17l-4 4"/></svg>
+        Transacties <span class="nav-badge" id="badgeTx">0</span>
+      </a>
+      <a class="nav-item" data-route="dividends" onclick="navigate('dividends')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10c0-1.1.9-2 2-2h2c1.1 0 2 .9 2 2s-.9 2-2 2h-2c-1.1 0-2 .9-2 2s.9 2 2 2h2c1.1 0 2-.9 2-2"/></svg>
+        Dividenden <span class="nav-badge" id="badgeDiv">0</span>
+      </a>
+      <a class="nav-item" data-route="holdings" onclick="navigate('holdings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l3-3 4 4 5-6"/></svg>
+        Posities <span class="nav-badge" id="badgeHold">0</span>
+      </a>
+      <a class="nav-item" data-route="calendar" onclick="navigate('calendar')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+        Kalender
+      </a>
+      <a class="nav-item" data-route="projection" onclick="navigate('projection')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+        Projectie
+      </a>
+      <a class="nav-item" data-route="tickers" onclick="navigate('tickers')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
+        Tickers
+      </a>
+      <a class="nav-item" data-route="settings" onclick="navigate('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+        Instellingen
+      </a>
+    </nav>
+
+    <div class="sb-foot">
+      <button class="sb-btn" onclick="openImportModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        CSV importeren
+      </button>
+      <div class="sb-sync idle" id="syncBar">
+        <span class="sb-sync-dot"></span>
+        <span id="syncText">Lokaal</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim" onclick="toggleSidebar(false)"></div>
+
+  <!-- ─────────── Main ─────────── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-burger" onclick="toggleSidebar(true)" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div style="flex:1; min-width:0;">
+        <div class="topbar-title" id="pageTitle">Dashboard</div>
+        <div class="topbar-sub" id="pageSub"></div>
+      </div>
+      <div id="topbarActions"></div>
+    </header>
+    <main class="content" id="content"></main>
+  </div>
+</div>
+
+<!-- ─────────── Modals & toasts container ─────────── -->
+<div class="modal-bg" id="txModal" onclick="if(event.target===this)closeTxModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="txModalTitle">Nieuwe transactie</div>
+      <button class="modal-close" onclick="closeTxModal()" aria-label="Sluiten">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-grid">
+      <div><label>Type</label>
+        <select class="select" id="txType" onchange="onTxTypeChange()">
+          <option value="koop">Koop</option>
+          <option value="verkoop">Verkoop</option>
+          <option value="dividend">Dividend</option>
+          <option value="storting">Storting (cash in)</option>
+          <option value="opname">Opname (cash out)</option>
+        </select>
+      </div>
+      <div><label>Datum</label><input class="input" type="date" id="txDate"></div>
+      <div class="tx-trade-only"><label>Ticker</label><input class="input" id="txTicker" placeholder="bv. AAPL" autocomplete="off"></div>
+      <div><label>Valuta</label>
+        <select class="select" id="txCurrency">
+          <option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option><option>CAD</option><option>JPY</option><option>AUD</option>
+        </select>
+      </div>
+      <div class="tx-trade-only"><label>Aantal</label><input class="input" type="number" step="any" id="txQty" placeholder="10"></div>
+      <div class="tx-trade-only" id="txPriceWrap"><label>Prijs per aandeel</label><input class="input" type="number" step="any" id="txPrice" placeholder="150.00"></div>
+      <div class="tx-cash-only hidden"><label>Bedrag</label><input class="input" type="number" step="any" id="txAmount" placeholder="1000.00"></div>
+      <div><label>Kosten</label><input class="input" type="number" step="any" id="txFee" placeholder="0.50" value="0"></div>
+      <div><label>FX-koers naar EUR</label><input class="input" type="number" step="any" id="txFx" placeholder="1.0" value="1"></div>
+      <div class="full"><label>Notitie (optioneel)</label><input class="input" id="txNote"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="txDeleteBtn" onclick="deleteTransaction()">Verwijderen</button>
+      <button class="btn" onclick="closeTxModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveTransaction()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="divModal" onclick="if(event.target===this)closeDivModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="divModalTitle">Nieuw dividend</div>
+      <button class="modal-close" onclick="closeDivModal()" aria-label="Sluiten">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-grid">
+      <div><label>Ticker</label><input class="input" id="divTicker" placeholder="bv. AAPL"></div>
+      <div><label>Betaaldatum</label><input class="input" type="date" id="divDate"></div>
+      <div><label>Bruto</label><input class="input" type="number" step="any" id="divGross"></div>
+      <div><label>Bronbelasting</label><input class="input" type="number" step="any" id="divTax" value="0"></div>
+      <div><label>Valuta</label>
+        <select class="select" id="divCurrency"><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option><option>CAD</option></select>
+      </div>
+      <div><label>FX-koers naar EUR</label><input class="input" type="number" step="any" id="divFx" value="1"></div>
+      <div class="full"><label>Notitie</label><input class="input" id="divNote"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="divDeleteBtn" onclick="deleteDividend()">Verwijderen</button>
+      <button class="btn" onclick="closeDivModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveDividend()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="tickerModal" onclick="if(event.target===this)closeTickerModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="tickerModalTitle">Ticker stamdata</div>
+      <button class="modal-close" onclick="closeTickerModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-grid">
+      <div><label>Ticker</label><input class="input" id="tkSymbol" placeholder="AAPL"></div>
+      <div><label>Naam</label><input class="input" id="tkName" placeholder="Apple Inc."></div>
+      <div><label>Type</label>
+        <select class="select" id="tkType">
+          <option value="stock">Aandeel</option>
+          <option value="etf">ETF</option>
+          <option value="bond">Obligatie</option>
+          <option value="fund">Fonds</option>
+          <option value="crypto">Crypto</option>
+          <option value="metal">Edelmetaal</option>
+          <option value="reit">REIT</option>
+          <option value="other">Overig</option>
+        </select>
+      </div>
+      <div><label>Sector</label>
+        <select class="select" id="tkSector">
+          <option value="">—</option>
+          <option>Technology</option><option>Healthcare</option><option>Financials</option>
+          <option>Consumer Discretionary</option><option>Consumer Staples</option><option>Energy</option>
+          <option>Utilities</option><option>Industrials</option><option>Real Estate</option>
+          <option>Materials</option><option>Communication</option>
+        </select>
+      </div>
+      <div><label>Industrie</label><input class="input" id="tkIndustry" placeholder="bv. Semiconductors"></div>
+      <div><label>Land</label><input class="input" id="tkCountry" placeholder="US"></div>
+      <div><label>Valuta</label>
+        <select class="select" id="tkCurrency"><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option><option>CAD</option><option>JPY</option><option>AUD</option></select>
+      </div>
+      <div><label>Huidige koers</label><input class="input" type="number" step="any" id="tkPrice"></div>
+      <div><label>Dividend per aandeel (jaar)</label><input class="input" type="number" step="any" id="tkDps"></div>
+      <div><label>Betaalfrequentie</label>
+        <select class="select" id="tkFreq">
+          <option value="4">Kwartaal (4x)</option>
+          <option value="12">Maandelijks (12x)</option>
+          <option value="2">Halfjaarlijks (2x)</option>
+          <option value="1">Jaarlijks (1x)</option>
+          <option value="0">Geen</option>
+        </select>
+      </div>
+      <div><label>Ex-dividend datum</label><input class="input" type="date" id="tkExDate"></div>
+      <div><label>Volgende betaaldatum</label><input class="input" type="date" id="tkPayDate"></div>
+      <div><label>Earnings datum</label><input class="input" type="date" id="tkEarnDate"></div>
+      <div><label>Capital Markets Day</label><input class="input" type="date" id="tkCmdDate"></div>
+      <div><label>AGM (aandeelhoudersvergadering)</label><input class="input" type="date" id="tkAgmDate"></div>
+      <div class="full">
+        <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;cursor:pointer;">
+          <input type="checkbox" id="tkAristocrat"> Dividend Aristocrat / King
+        </label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="tkDeleteBtn" onclick="deleteTicker()">Verwijderen</button>
+      <button class="btn" id="tkRefreshBtn" onclick="refreshFromTickerModal()" title="Yahoo Finance ophalen voor dit symbool">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>
+        Yahoo
+      </button>
+      <button class="btn" onclick="closeTickerModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveTicker()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="importModal" onclick="if(event.target===this)closeImportModal()">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">CSV importeren</div>
+      <button class="modal-close" onclick="closeImportModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+      <label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;margin:0;align-self:center;">Broker:</label>
+      <select class="select" id="csvBroker" style="width:auto;" onchange="applyBrokerPreset()">
+        <option value="auto">Auto-detect</option>
+        <option value="degiro">DeGiro</option>
+        <option value="ibkr">Interactive Brokers</option>
+        <option value="trading212">Trading 212</option>
+        <option value="custom">Aangepast</option>
+      </select>
+      <label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;margin:0;align-self:center;">Type:</label>
+      <select class="select" id="csvKind" style="width:auto;">
+        <option value="transactions">Transacties</option>
+        <option value="dividends">Dividenden</option>
+      </select>
+    </div>
+    <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      <div><strong>Klik of sleep een CSV-bestand hier</strong></div>
+      <div style="font-size:12px; margin-top:4px;">Of plak CSV-tekst in het veld hieronder</div>
+    </div>
+    <input type="file" id="csvFile" accept=".csv,.txt" class="hidden" onchange="handleCsvFile(this.files[0])">
+    <textarea class="textarea mt-2" id="csvPaste" placeholder="Of plak CSV hier..." rows="4" oninput="parseCsvText(this.value)"></textarea>
+    <div id="csvPreview" class="hidden">
+      <div class="csv-map">
+        <div><label>Datum kolom</label><select class="select" id="mapDate"></select></div>
+        <div><label>Ticker kolom</label><select class="select" id="mapTicker"></select></div>
+        <div id="mapTypeWrap"><label>Type kolom (optioneel)</label><select class="select" id="mapType"></select></div>
+        <div><label>Aantal kolom</label><select class="select" id="mapQty"></select></div>
+        <div><label>Prijs / Bedrag kolom</label><select class="select" id="mapPrice"></select></div>
+        <div><label>Kosten / Belasting kolom (optioneel)</label><select class="select" id="mapFee"></select></div>
+        <div><label>Valuta kolom (optioneel)</label><select class="select" id="mapCurrency"></select></div>
+        <div><label>FX-koers kolom (optioneel)</label><select class="select" id="mapFx"></select></div>
+      </div>
+      <div class="csv-preview" id="csvPreviewTable"></div>
+      <div class="text-muted mt-2" id="csvSummary" style="font-size:12px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeImportModal()">Annuleren</button>
+      <button class="btn btn-primary" id="csvImportBtn" onclick="commitCsvImport()" disabled>Importeer 0 rijen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="pfModal" onclick="if(event.target===this)closePfModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="pfModalTitle">Nieuwe portefeuille</div>
+      <button class="modal-close" onclick="closePfModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div><label>Naam</label><input class="input" id="pfName" placeholder="bv. Privé"></div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="pfDeleteBtn" onclick="deletePortfolio()">Verwijderen</button>
+      <button class="btn" onclick="closePfModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="savePortfolio()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="gistModal" onclick="if(event.target===this)closeGistModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">GitHub Gist sync</div>
+      <button class="modal-close" onclick="closeGistModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <p class="text-muted" style="font-size:13px;">Synchroniseer je data via een private GitHub Gist. Een Personal Access Token (PAT) met <code>gist</code> scope is nodig.</p>
+    <div><label>GitHub Token (PAT)</label><input class="input" type="password" id="gistToken" placeholder="ghp_..."></div>
+    <div class="mt-2"><label>Gist ID (laat leeg om aan te maken)</label><input class="input" id="gistId" placeholder="optioneel"></div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" onclick="clearGistSync()">Loskoppelen</button>
+      <button class="btn" onclick="closeGistModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveGistConfig()">Verbinden</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   STATE & PERSISTENCE
+   ═══════════════════════════════════════════════════════════ */
+
+const LS_BACKUP_KEY = 'herling_dividend_state_v1';
+const LS_TOKEN_KEY = 'herling_dividend_gh_token';
+const LS_GIST_KEY = 'herling_dividend_gist_id';
+const LS_YAHOO_LAST = 'herling_dividend_yahoo_last_fetch';
+const LS_YAHOO_PROXY = 'herling_dividend_yahoo_working_proxy';
+const GIST_FILENAME = 'herling_dividend_tracker.json';
+
+/* CORS proxies — fallback chain. First-working is cached in LS_YAHOO_PROXY. */
+const YAHOO_PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+];
+
+let rawState = {
+  portfolios: [],
+  activePortfolioId: null,
+  transactions: [],
+  dividends: [],
+  tickers: [],
+  settings: { theme: 'auto', baseCurrency: 'EUR' }
+};
+
+let saveTimer = null;
+let saveInFlight = false;
+let pendingSave = false;
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function initState() {
+  const backup = localStorage.getItem(LS_BACKUP_KEY);
+  if (backup) {
+    try { rawState = JSON.parse(backup); } catch (e) { console.warn('Backup parse failed', e); }
+  }
+  if (!rawState.portfolios || !rawState.portfolios.length) {
+    const pf = { id: uid(), name: 'Privé', createdAt: new Date().toISOString() };
+    rawState.portfolios = [pf];
+    rawState.activePortfolioId = pf.id;
+  }
+  if (!rawState.activePortfolioId || !rawState.portfolios.find(p => p.id === rawState.activePortfolioId)) {
+    rawState.activePortfolioId = rawState.portfolios[0].id;
+  }
+  if (!rawState.transactions) rawState.transactions = [];
+  if (!rawState.dividends) rawState.dividends = [];
+  if (!rawState.tickers) rawState.tickers = [];
+  if (!rawState.settings) rawState.settings = { theme: 'auto', baseCurrency: 'EUR' };
+  if (!rawState.settings.baseCurrency) rawState.settings.baseCurrency = 'EUR';
+  if (!rawState.settings.theme) rawState.settings.theme = 'auto';
+}
+
+function scheduleSave() {
+  try { localStorage.setItem(LS_BACKUP_KEY, JSON.stringify(rawState)); } catch (e) {}
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveGist, 1500);
+}
+
+async function saveGist() {
+  const token = localStorage.getItem(LS_TOKEN_KEY);
+  const gistId = localStorage.getItem(LS_GIST_KEY);
+  if (!token) { setSync('idle', 'Lokaal'); return; }
+  if (saveInFlight) { pendingSave = true; return; }
+  saveInFlight = true;
+  setSync('saving', 'Opslaan...');
+  try {
+    const body = { files: { [GIST_FILENAME]: { content: JSON.stringify(rawState, null, 2) } } };
+    let resp;
+    if (gistId) {
+      resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      resp = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, description: 'Herling Dividend Tracker', public: false })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        localStorage.setItem(LS_GIST_KEY, data.id);
+      }
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    setSync('saved', 'Gesynchroniseerd');
+  } catch (e) {
+    setSync('error', 'Sync fout: ' + e.message);
+    setTimeout(saveGist, 5000);
+  } finally {
+    saveInFlight = false;
+    if (pendingSave) { pendingSave = false; setTimeout(saveGist, 100); }
+  }
+}
+
+async function loadGist() {
+  const token = localStorage.getItem(LS_TOKEN_KEY);
+  const gistId = localStorage.getItem(LS_GIST_KEY);
+  if (!token || !gistId) return;
+  setSync('saving', 'Laden...');
+  try {
+    const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { Authorization: `token ${token}` }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const file = data.files && data.files[GIST_FILENAME];
+    if (file && file.content) {
+      const loaded = JSON.parse(file.content);
+      rawState = loaded;
+      initState();
+      renderAll();
+      setSync('saved', 'Gesynchroniseerd');
+    }
+  } catch (e) {
+    setSync('error', 'Laad fout: ' + e.message);
+  }
+}
+
+window.addEventListener('beforeunload', () => {
+  try { localStorage.setItem(LS_BACKUP_KEY, JSON.stringify(rawState)); } catch (e) {}
+});
+
+function setSync(type, msg) {
+  const bar = document.getElementById('syncBar');
+  bar.className = 'sb-sync ' + type;
+  document.getElementById('syncText').textContent = msg;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════ */
+
+const fmtEUR = n => (n == null || isNaN(n)) ? '—' : new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n);
+const fmtNum = (n, d = 2) => (n == null || isNaN(n)) ? '—' : new Intl.NumberFormat('nl-NL', { maximumFractionDigits: d, minimumFractionDigits: d }).format(n);
+const fmtPct = (n, d = 2) => (n == null || isNaN(n)) ? '—' : new Intl.NumberFormat('nl-NL', { maximumFractionDigits: d, minimumFractionDigits: d }).format(n) + '%';
+const fmtDate = s => { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }); };
+const fmtMonth = s => { const d = new Date(s); return d.toLocaleDateString('nl-NL', { month: 'short', year: '2-digit' }); };
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+function activePortfolio() { return rawState.portfolios.find(p => p.id === rawState.activePortfolioId); }
+function pfTransactions() { return rawState.transactions.filter(t => t.portfolioId === rawState.activePortfolioId); }
+function pfDividends() { return rawState.dividends.filter(d => d.portfolioId === rawState.activePortfolioId); }
+
+function appToast(msg, opts = {}) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (opts.type ? ' ' + opts.type : '');
+  el.innerHTML = `<span class="toast-msg"></span>`;
+  el.querySelector('.toast-msg').textContent = msg;
+  if (opts.action) {
+    const btn = document.createElement('button');
+    btn.className = 'toast-btn';
+    btn.textContent = opts.actionLabel || 'Ongedaan';
+    btn.onclick = () => { opts.action(); el.remove(); };
+    el.appendChild(btn);
+  }
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, opts.duration || 4000);
+}
+
+function getTicker(symbol) {
+  if (!symbol) return null;
+  return rawState.tickers.find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
+}
+function ensureTicker(symbol) {
+  let t = getTicker(symbol);
+  if (!t) {
+    t = { id: uid(), symbol: symbol.toUpperCase(), name: '', type: 'stock', sector: '', industry: '', country: '', currency: 'EUR', price: null, dps: null, freq: 4, exDate: null, payDate: null, earnDate: null, cmdDate: null, agmDate: null, aristocrat: false };
+    rawState.tickers.push(t);
+  } else {
+    /* migrate older records to new shape */
+    if (!t.type) t.type = 'stock';
+    if (t.industry === undefined) t.industry = '';
+    if (t.earnDate === undefined) t.earnDate = null;
+    if (t.cmdDate === undefined) t.cmdDate = null;
+    if (t.agmDate === undefined) t.agmDate = null;
+  }
+  return t;
+}
+
+/* FX rate to EUR for a given currency, derived from the most recent transaction
+   or dividend in that currency. EUR → 1. Fallback to 1 if no data. */
+function fxForCurrency(currency) {
+  if (!currency || currency === 'EUR') return 1;
+  let latest = null, latestDate = '';
+  for (const t of rawState.transactions) {
+    if (t.currency === currency && t.fx && (t.date || '') > latestDate) { latest = +t.fx; latestDate = t.date; }
+  }
+  for (const d of rawState.dividends) {
+    if (d.currency === currency && d.fx && (d.date || '') > latestDate) { latest = +d.fx; latestDate = d.date; }
+  }
+  return latest || 1;
+}
+
+/* Compute current holdings from transactions */
+function computeHoldings() {
+  const map = new Map();
+  pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(tx => {
+    const k = (tx.ticker || '').toUpperCase();
+    if (!k || tx.type === 'dividend' || tx.type === 'storting' || tx.type === 'opname') return;
+    if (!map.has(k)) map.set(k, { ticker: k, qty: 0, costEur: 0, realizedEur: 0 });
+    const h = map.get(k);
+    const qty = +tx.qty || 0;
+    const price = +tx.price || 0;
+    const fee = +tx.fee || 0;
+    const fx = +tx.fx || 1;
+    if (tx.type === 'koop') {
+      h.qty += qty;
+      h.costEur += (qty * price + fee) * fx;
+    } else if (tx.type === 'verkoop') {
+      const avgCost = h.qty > 0 ? h.costEur / h.qty : 0;
+      h.realizedEur += (qty * price - fee) * fx - qty * avgCost;
+      h.costEur -= avgCost * qty;
+      h.qty -= qty;
+    }
+  });
+  return [...map.values()].filter(h => Math.abs(h.qty) > 0.000001);
+}
+
+/* Cash balance: stortingen - opnamen - koop totalen + verkoop netto + ontvangen dividenden */
+function computeCash() {
+  let cash = 0;
+  pfTransactions().forEach(tx => {
+    const fx = +tx.fx || 1;
+    const fee = +tx.fee || 0;
+    if (tx.type === 'storting') cash += (+tx.amount || 0) * fx;
+    else if (tx.type === 'opname') cash -= (+tx.amount || 0) * fx;
+    else if (tx.type === 'koop') cash -= ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+    else if (tx.type === 'verkoop') cash += ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx;
+  });
+  pfDividends().forEach(d => cash += ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)));
+  return cash;
+}
+
+/* Build value-over-time series (monthly cost basis + invested) */
+function buildValueSeries() {
+  const txs = pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (!txs.length) return [];
+  const startD = new Date(txs[0].date);
+  const endD = new Date();
+  const months = [];
+  const cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
+  while (cur <= endD) {
+    months.push(new Date(cur));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  const dividends = pfDividends().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  return months.map(m => {
+    const cutoff = new Date(m.getFullYear(), m.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const holdingMap = new Map();
+    let cash = 0;
+    txs.filter(t => (t.date || '') <= cutoff).forEach(tx => {
+      const fx = +tx.fx || 1, fee = +tx.fee || 0;
+      if (tx.type === 'storting') cash += (+tx.amount || 0) * fx;
+      else if (tx.type === 'opname') cash -= (+tx.amount || 0) * fx;
+      else if (tx.type === 'koop') {
+        cash -= ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+        const k = (tx.ticker || '').toUpperCase();
+        if (!holdingMap.has(k)) holdingMap.set(k, { qty: 0, costEur: 0 });
+        const h = holdingMap.get(k);
+        h.qty += +tx.qty || 0;
+        h.costEur += ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+      } else if (tx.type === 'verkoop') {
+        cash += ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx;
+        const k = (tx.ticker || '').toUpperCase();
+        const h = holdingMap.get(k);
+        if (h) {
+          const avg = h.qty > 0 ? h.costEur / h.qty : 0;
+          h.costEur -= avg * (+tx.qty || 0);
+          h.qty -= +tx.qty || 0;
+        }
+      }
+    });
+    dividends.filter(d => (d.date || '') <= cutoff).forEach(d => cash += ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)));
+    let invested = 0, marketValue = 0;
+    holdingMap.forEach((h, k) => {
+      if (Math.abs(h.qty) < 0.000001) return;
+      invested += h.costEur;
+      const tk = getTicker(k);
+      const fx = tk ? fxForCurrency(tk.currency) : 1;
+      const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
+      marketValue += h.qty * priceEur;
+    });
+    return { date: cutoff, invested, marketValue, cash, total: marketValue + cash };
+  });
+}
+
+/* MWRR via Newton-Raphson on EXTERNAL cashflows.
+   External = stortingen (out, negative) + opnamen (in, positive) + end value (in, positive).
+   Buys/sells/dividends are internal to the portfolio (cash + securities) and net out.
+   Fallback when no stortingen exist: use buys as implicit deposits & sells as implicit withdrawals. */
+function computeMwrr() {
+  const today = todayISO();
+  const hasExplicitCash = pfTransactions().some(t => t.type === 'storting' || t.type === 'opname');
+  const flows = [];
+  if (hasExplicitCash) {
+    pfTransactions().forEach(tx => {
+      const fx = +tx.fx || 1;
+      if (tx.type === 'storting') flows.push({ date: tx.date, amount: -(+tx.amount || 0) * fx });
+      else if (tx.type === 'opname') flows.push({ date: tx.date, amount: (+tx.amount || 0) * fx });
+    });
+  } else {
+    pfTransactions().forEach(tx => {
+      const fx = +tx.fx || 1, fee = +tx.fee || 0;
+      if (tx.type === 'koop') flows.push({ date: tx.date, amount: -((+tx.qty || 0) * (+tx.price || 0) + fee) * fx });
+      else if (tx.type === 'verkoop') flows.push({ date: tx.date, amount: ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx });
+    });
+    pfDividends().forEach(d => flows.push({ date: d.date, amount: ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)) }));
+  }
+  if (!flows.length) return null;
+  const s = portfolioStats();
+  const endVal = s.currentValue + computeCash();
+  if (endVal <= 0) return null;
+  flows.push({ date: today, amount: endVal });
+  flows.sort((a, b) => a.date.localeCompare(b.date));
+  const t0 = new Date(flows[0].date).getTime();
+  const yrs = flows.map(f => ({ y: (new Date(f.date).getTime() - t0) / 31557600000, a: f.amount }));
+  /* Newton-Raphson on f(r) = sum( a_i / (1+r)^y_i ) = 0 */
+  const f = r => yrs.reduce((s, x) => s + x.a / Math.pow(1 + r, x.y), 0);
+  const df = r => yrs.reduce((s, x) => s - x.y * x.a / Math.pow(1 + r, x.y + 1), 0);
+  let r = 0.1;
+  for (let i = 0; i < 80; i++) {
+    const v = f(r), d = df(r);
+    if (Math.abs(d) < 1e-12) break;
+    const nr = r - v / d;
+    if (!isFinite(nr) || nr < -0.999) break;
+    if (Math.abs(nr - r) < 1e-8) { r = nr; break; }
+    r = nr;
+  }
+  return (isFinite(r) && Math.abs(r) < 10) ? r * 100 : null;
+}
+
+/* CAGR — simple compound growth from first investment to today */
+function computeCagr() {
+  const txs = pfTransactions().filter(t => t.type === 'koop' || t.type === 'storting').slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (!txs.length) return null;
+  const startD = new Date(txs[0].date);
+  const years = (Date.now() - startD.getTime()) / 31557600000;
+  if (years < 0.05) return null;
+  const s = portfolioStats();
+  const cash = computeCash();
+  const endVal = s.currentValue + cash;
+  const totalInvested = pfTransactions().reduce((sum, t) => {
+    const fx = +t.fx || 1, fee = +t.fee || 0;
+    if (t.type === 'storting') return sum + (+t.amount || 0) * fx;
+    if (t.type === 'opname') return sum - (+t.amount || 0) * fx;
+    return sum;
+  }, 0) || s.invested;
+  if (totalInvested <= 0 || endVal <= 0) return null;
+  return (Math.pow(endVal / totalInvested, 1 / years) - 1) * 100;
+}
+
+function computeRealized() {
+  return computeHoldings().reduce((s, h) => s + (h.realizedEur || 0), 0);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   YAHOO FINANCE INTEGRATION
+   ═══════════════════════════════════════════════════════════ */
+
+async function yahooFetch(url) {
+  /* Try cached-working proxy first, then the rest */
+  const lastIdx = parseInt(localStorage.getItem(LS_YAHOO_PROXY), 10);
+  const order = YAHOO_PROXIES.map((_, i) => i);
+  if (!isNaN(lastIdx) && lastIdx >= 0 && lastIdx < YAHOO_PROXIES.length) {
+    order.splice(order.indexOf(lastIdx), 1);
+    order.unshift(lastIdx);
+  }
+  for (const i of order) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 9000);
+      const r = await fetch(YAHOO_PROXIES[i](url), { signal: controller.signal, headers: { 'Accept': 'application/json' } });
+      clearTimeout(timer);
+      if (!r.ok) continue;
+      const text = await r.text();
+      if (!text || !text.trim().startsWith('{')) continue;
+      const json = JSON.parse(text);
+      if (json?.chart?.error) continue;
+      localStorage.setItem(LS_YAHOO_PROXY, String(i));
+      return json;
+    } catch (e) {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+/* Fetch quote + historical dividends from Yahoo chart endpoint.
+   Returns { price, currency, name, exchange, dps (annual from last 12 mo), lastExDate, divCount, freq } or null. */
+async function fetchYahooFullData(symbol) {
+  if (!symbol) return null;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2y&events=div`;
+  const json = await yahooFetch(url);
+  const result = json?.chart?.result?.[0];
+  if (!result) return null;
+  const meta = result.meta || {};
+  const divsObj = result.events?.dividends || {};
+  const divs = Object.values(divsObj);
+  const oneYearAgoSec = Date.now() / 1000 - 365 * 86400;
+  const twoYearAgoSec = Date.now() / 1000 - 730 * 86400;
+  const last12 = divs.filter(d => d.date >= oneYearAgoSec);
+  const last24 = divs.filter(d => d.date >= twoYearAgoSec);
+  const dpsAnnual = last12.reduce((s, d) => s + (+d.amount || 0), 0);
+  const lastDiv = divs.slice().sort((a, b) => b.date - a.date)[0];
+  /* Derive frequency from last 24 months (more stable than 12) */
+  let freq = null;
+  if (last24.length >= 2) freq = Math.round(last24.length / 2);
+  else if (last12.length) freq = last12.length;
+  /* Normalize known freqs */
+  if (freq && ![1, 2, 4, 12].includes(freq)) {
+    freq = [1, 2, 4, 12].reduce((best, f) => Math.abs(f - freq) < Math.abs(best - freq) ? f : best, 4);
+  }
+  return {
+    price: meta.regularMarketPrice ?? null,
+    currency: meta.currency || null,
+    exchange: meta.exchangeName || null,
+    name: meta.longName || meta.shortName || null,
+    dps: dpsAnnual > 0 ? dpsAnnual : null,
+    lastExDate: lastDiv ? new Date(lastDiv.date * 1000).toISOString().slice(0, 10) : null,
+    divCount: last12.length,
+    freq
+  };
+}
+
+/* Refresh one ticker. Returns true on success. */
+async function refreshTicker(symbolOrTicker) {
+  const t = typeof symbolOrTicker === 'string' ? getTicker(symbolOrTicker) : symbolOrTicker;
+  if (!t) return false;
+  const data = await fetchYahooFullData(t.symbol);
+  if (!data) return false;
+  /* Price + currency must stay paired — always refresh together when Yahoo returns price */
+  if (data.price != null) {
+    t.price = data.price;
+    if (data.currency) t.currency = data.currency;
+  }
+  if (data.name && !t.name) t.name = data.name;
+  if (data.dps != null) t.dps = data.dps;
+  if (data.lastExDate) t.exDate = data.lastExDate;
+  if (data.freq) t.freq = data.freq;
+  t.lastFetchedAt = new Date().toISOString();
+  return true;
+}
+
+let _refreshInFlight = false;
+async function refreshAllTickers() {
+  if (_refreshInFlight) { appToast('Al bezig met verversen', { type: 'warn' }); return; }
+  if (!rawState.tickers.length) { appToast('Geen tickers om te verversen', { type: 'warn' }); return; }
+  _refreshInFlight = true;
+  let ok = 0, fail = 0;
+  const total = rawState.tickers.length;
+  setSync('saving', `Tickers verversen 0/${total}...`);
+  for (let i = 0; i < total; i++) {
+    const t = rawState.tickers[i];
+    setSync('saving', `Tickers verversen ${i + 1}/${total} (${t.symbol})...`);
+    try {
+      const r = await refreshTicker(t);
+      if (r) ok++; else fail++;
+    } catch (e) { fail++; }
+    /* polite delay */
+    if (i < total - 1) await new Promise(res => setTimeout(res, 400));
+  }
+  localStorage.setItem(LS_YAHOO_LAST, new Date().toISOString());
+  _refreshInFlight = false;
+  scheduleSave(); renderAll();
+  appToast(`${ok} bijgewerkt${fail ? `, ${fail} gefaald` : ''}`, { type: fail && !ok ? 'error' : undefined });
+}
+
+async function refreshSingleTicker(id) {
+  const t = rawState.tickers.find(x => x.id === id);
+  if (!t) return;
+  setSync('saving', `Verversen ${t.symbol}...`);
+  const ok = await refreshTicker(t);
+  scheduleSave(); renderAll();
+  if (ok) appToast(`${t.symbol} bijgewerkt`);
+  else appToast(`${t.symbol}: niet gevonden of proxy down`, { type: 'error' });
+}
+
+function yahooLastFetchAgo() {
+  const iso = localStorage.getItem(LS_YAHOO_LAST);
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  const hours = ms / 3600000;
+  if (hours < 1) return Math.round(ms / 60000) + ' min geleden';
+  if (hours < 24) return Math.round(hours) + ' uur geleden';
+  return Math.round(hours / 24) + ' dagen geleden';
+}
+
+async function autoRefreshOnBoot() {
+  if (!rawState.settings?.autoRefresh) return;
+  const last = localStorage.getItem(LS_YAHOO_LAST);
+  const stale = !last || (Date.now() - new Date(last).getTime() > 20 * 3600 * 1000);
+  if (stale && rawState.tickers.length) {
+    /* wait a moment so initial render isn't blocked */
+    setTimeout(() => refreshAllTickers(), 1500);
+  }
+}
+
+function portfolioStats() {
+  const holdings = computeHoldings();
+  let invested = 0, currentValue = 0, forwardDiv = 0;
+  holdings.forEach(h => {
+    invested += h.costEur;
+    const tk = getTicker(h.ticker);
+    const fx = tk ? fxForCurrency(tk.currency) : 1;
+    /* If no ticker price set, fall back to avg cost per share (already EUR) */
+    const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
+    currentValue += h.qty * priceEur;
+    if (tk?.dps) forwardDiv += h.qty * tk.dps * fx;
+  });
+  const received = pfDividends().reduce((s, d) => s + ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)), 0);
+  const yoc = invested > 0 ? (forwardDiv / invested) * 100 : 0;
+  const yieldNow = currentValue > 0 ? (forwardDiv / currentValue) * 100 : 0;
+  return { invested, currentValue, forwardDiv, yoc, yieldNow, received, holdings };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ROUTING
+   ═══════════════════════════════════════════════════════════ */
+
+const ROUTES = {
+  dashboard: { title: 'Dashboard', render: renderDashboard, actions: () => '' },
+  transactions: { title: 'Transacties', render: renderTransactions, actions: () => `<button class="btn btn-primary" onclick="openTxModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe transactie</button>` },
+  dividends: { title: 'Dividenden', render: renderDividends, actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Dividend toevoegen</button>` },
+  holdings: { title: 'Posities', render: renderHoldings, actions: () => '' },
+  calendar: { title: 'Dividend kalender', render: renderCalendar, actions: () => '' },
+  projection: { title: 'Projectie', render: renderProjection, actions: () => '' },
+  tickers: { title: 'Tickers', render: renderTickers, actions: () => `<button class="btn" onclick="refreshAllTickers()" title="Yahoo Finance ophalen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>Refresh</button> <button class="btn btn-primary" onclick="openTickerModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe ticker</button>` },
+  settings: { title: 'Instellingen', render: renderSettings, actions: () => '' }
+};
+
+function navigate(route) {
+  if (!ROUTES[route]) route = 'dashboard';
+  location.hash = '#' + route;
+}
+
+function currentRoute() {
+  const r = (location.hash || '#dashboard').replace('#', '');
+  return ROUTES[r] ? r : 'dashboard';
+}
+
+function renderAll() {
+  const route = currentRoute();
+  const def = ROUTES[route];
+  document.getElementById('pageTitle').textContent = def.title;
+  const pf = activePortfolio();
+  document.getElementById('pageSub').textContent = pf ? `Portefeuille: ${pf.name}` : '';
+  document.getElementById('topbarActions').innerHTML = def.actions();
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.route === route));
+  document.getElementById('content').innerHTML = '';
+  def.render();
+  renderPortfolioSelect();
+  updateBadges();
+  if (window.innerWidth <= 768) toggleSidebar(false);
+}
+
+function toggleSidebar(open) {
+  document.getElementById('sidebar').classList.toggle('open', open);
+  document.getElementById('scrim').classList.toggle('open', open);
+}
+
+function updateBadges() {
+  document.getElementById('badgeTx').textContent = pfTransactions().length;
+  document.getElementById('badgeDiv').textContent = pfDividends().length;
+  document.getElementById('badgeHold').textContent = computeHoldings().length;
+}
+
+function renderPortfolioSelect() {
+  const sel = document.getElementById('pfSelect');
+  sel.innerHTML = '';
+  rawState.portfolios.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.name;
+    if (p.id === rawState.activePortfolioId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  const addOpt = document.createElement('option');
+  addOpt.value = '__new__'; addOpt.textContent = '+ Nieuwe portefeuille...';
+  sel.appendChild(addOpt);
+}
+
+function switchPortfolio(id) {
+  if (id === '__new__') { openPfModal(); renderPortfolioSelect(); return; }
+  rawState.activePortfolioId = id;
+  scheduleSave();
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PORTFOLIO MODAL
+   ═══════════════════════════════════════════════════════════ */
+
+let editingPfId = null;
+
+function openPfModal(id = null) {
+  editingPfId = id;
+  const pf = id ? rawState.portfolios.find(p => p.id === id) : null;
+  document.getElementById('pfModalTitle').textContent = pf ? 'Portefeuille bewerken' : 'Nieuwe portefeuille';
+  document.getElementById('pfName').value = pf?.name || '';
+  document.getElementById('pfDeleteBtn').classList.toggle('hidden', !pf || rawState.portfolios.length <= 1);
+  document.getElementById('pfModal').classList.add('open');
+  setTimeout(() => document.getElementById('pfName').focus(), 50);
+}
+function closePfModal() { document.getElementById('pfModal').classList.remove('open'); editingPfId = null; }
+function savePortfolio() {
+  const name = document.getElementById('pfName').value.trim();
+  if (!name) { appToast('Naam is verplicht', { type: 'error' }); return; }
+  if (editingPfId) {
+    const pf = rawState.portfolios.find(p => p.id === editingPfId);
+    pf.name = name;
+  } else {
+    const pf = { id: uid(), name, createdAt: new Date().toISOString() };
+    rawState.portfolios.push(pf);
+    rawState.activePortfolioId = pf.id;
+  }
+  scheduleSave(); closePfModal(); renderAll();
+}
+function deletePortfolio() {
+  if (!editingPfId) return;
+  if (!confirm('Verwijder deze portefeuille en al zijn transacties/dividenden?')) return;
+  rawState.transactions = rawState.transactions.filter(t => t.portfolioId !== editingPfId);
+  rawState.dividends = rawState.dividends.filter(d => d.portfolioId !== editingPfId);
+  rawState.portfolios = rawState.portfolios.filter(p => p.id !== editingPfId);
+  if (rawState.activePortfolioId === editingPfId) rawState.activePortfolioId = rawState.portfolios[0]?.id;
+  scheduleSave(); closePfModal(); renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TRANSACTION MODAL
+   ═══════════════════════════════════════════════════════════ */
+
+let editingTxId = null;
+
+function openTxModal(id = null) {
+  editingTxId = id;
+  const tx = id ? rawState.transactions.find(t => t.id === id) : null;
+  document.getElementById('txModalTitle').textContent = tx ? 'Transactie bewerken' : 'Nieuwe transactie';
+  document.getElementById('txType').value = tx?.type || 'koop';
+  document.getElementById('txDate').value = tx?.date || todayISO();
+  document.getElementById('txTicker').value = tx?.ticker || '';
+  document.getElementById('txQty').value = tx?.qty ?? '';
+  document.getElementById('txPrice').value = tx?.price ?? '';
+  document.getElementById('txAmount').value = tx?.amount ?? '';
+  document.getElementById('txFee').value = tx?.fee ?? 0;
+  document.getElementById('txCurrency').value = tx?.currency || 'EUR';
+  document.getElementById('txFx').value = tx?.fx ?? 1;
+  document.getElementById('txNote').value = tx?.note || '';
+  document.getElementById('txDeleteBtn').classList.toggle('hidden', !tx);
+  document.getElementById('txModal').classList.add('open');
+  onTxTypeChange();
+  setTimeout(() => { const isCash = ['storting','opname'].includes(document.getElementById('txType').value); document.getElementById(isCash ? 'txAmount' : 'txTicker').focus(); }, 50);
+}
+function onTxTypeChange() {
+  const t = document.getElementById('txType').value;
+  const isCash = (t === 'storting' || t === 'opname');
+  document.querySelectorAll('#txModal .tx-trade-only').forEach(el => el.classList.toggle('hidden', isCash));
+  document.querySelectorAll('#txModal .tx-cash-only').forEach(el => el.classList.toggle('hidden', !isCash));
+}
+function closeTxModal() { document.getElementById('txModal').classList.remove('open'); editingTxId = null; }
+function saveTransaction() {
+  const type = document.getElementById('txType').value;
+  const isCash = (type === 'storting' || type === 'opname');
+  const data = {
+    type,
+    date: document.getElementById('txDate').value || todayISO(),
+    fee: parseFloat(document.getElementById('txFee').value) || 0,
+    currency: document.getElementById('txCurrency').value,
+    fx: parseFloat(document.getElementById('txFx').value) || 1,
+    note: document.getElementById('txNote').value.trim(),
+    portfolioId: rawState.activePortfolioId
+  };
+  if (isCash) {
+    const amount = parseFloat(document.getElementById('txAmount').value);
+    if (isNaN(amount) || amount <= 0) { appToast('Bedrag is verplicht', { type: 'error' }); return; }
+    data.amount = amount;
+    data.ticker = ''; data.qty = 0; data.price = 0;
+  } else {
+    const ticker = document.getElementById('txTicker').value.trim().toUpperCase();
+    const qty = parseFloat(document.getElementById('txQty').value);
+    const price = parseFloat(document.getElementById('txPrice').value);
+    if (!ticker || isNaN(qty) || isNaN(price)) { appToast('Ticker, aantal en prijs zijn verplicht', { type: 'error' }); return; }
+    data.ticker = ticker; data.qty = qty; data.price = price;
+    ensureTicker(ticker);
+  }
+  if (editingTxId) {
+    Object.assign(rawState.transactions.find(t => t.id === editingTxId), data);
+  } else {
+    rawState.transactions.push({ id: uid(), ...data, createdAt: new Date().toISOString() });
+  }
+  scheduleSave(); closeTxModal(); renderAll();
+  appToast('Transactie opgeslagen');
+}
+function deleteTransaction() {
+  if (!editingTxId) return;
+  const tx = rawState.transactions.find(t => t.id === editingTxId);
+  rawState.transactions = rawState.transactions.filter(t => t.id !== editingTxId);
+  scheduleSave(); closeTxModal(); renderAll();
+  appToast('Verwijderd', { action: () => { rawState.transactions.push(tx); scheduleSave(); renderAll(); }, actionLabel: 'Ongedaan' });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DIVIDEND MODAL
+   ═══════════════════════════════════════════════════════════ */
+
+let editingDivId = null;
+
+function openDivModal(id = null) {
+  editingDivId = id;
+  const d = id ? rawState.dividends.find(x => x.id === id) : null;
+  document.getElementById('divModalTitle').textContent = d ? 'Dividend bewerken' : 'Nieuw dividend';
+  document.getElementById('divTicker').value = d?.ticker || '';
+  document.getElementById('divDate').value = d?.date || todayISO();
+  document.getElementById('divGross').value = d?.gross ?? '';
+  document.getElementById('divTax').value = d?.tax ?? 0;
+  document.getElementById('divCurrency').value = d?.currency || 'EUR';
+  document.getElementById('divFx').value = d?.fx ?? 1;
+  document.getElementById('divNote').value = d?.note || '';
+  document.getElementById('divDeleteBtn').classList.toggle('hidden', !d);
+  document.getElementById('divModal').classList.add('open');
+  setTimeout(() => document.getElementById('divTicker').focus(), 50);
+}
+function closeDivModal() { document.getElementById('divModal').classList.remove('open'); editingDivId = null; }
+function saveDividend() {
+  const ticker = document.getElementById('divTicker').value.trim().toUpperCase();
+  const gross = parseFloat(document.getElementById('divGross').value);
+  if (!ticker || isNaN(gross)) { appToast('Ticker en bruto bedrag zijn verplicht', { type: 'error' }); return; }
+  const data = {
+    ticker, gross,
+    tax: parseFloat(document.getElementById('divTax').value) || 0,
+    date: document.getElementById('divDate').value || todayISO(),
+    currency: document.getElementById('divCurrency').value,
+    fx: parseFloat(document.getElementById('divFx').value) || 1,
+    note: document.getElementById('divNote').value.trim(),
+    portfolioId: rawState.activePortfolioId
+  };
+  if (editingDivId) {
+    Object.assign(rawState.dividends.find(x => x.id === editingDivId), data);
+  } else {
+    rawState.dividends.push({ id: uid(), ...data, createdAt: new Date().toISOString() });
+  }
+  ensureTicker(ticker);
+  scheduleSave(); closeDivModal(); renderAll();
+  appToast('Dividend opgeslagen');
+}
+function deleteDividend() {
+  if (!editingDivId) return;
+  const d = rawState.dividends.find(x => x.id === editingDivId);
+  rawState.dividends = rawState.dividends.filter(x => x.id !== editingDivId);
+  scheduleSave(); closeDivModal(); renderAll();
+  appToast('Verwijderd', { action: () => { rawState.dividends.push(d); scheduleSave(); renderAll(); }, actionLabel: 'Ongedaan' });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TICKER MODAL
+   ═══════════════════════════════════════════════════════════ */
+
+let editingTkId = null;
+
+function openTickerModal(id = null) {
+  editingTkId = id;
+  const t = id ? rawState.tickers.find(x => x.id === id) : null;
+  document.getElementById('tickerModalTitle').textContent = t ? `Ticker: ${t.symbol}` : 'Nieuwe ticker';
+  document.getElementById('tkSymbol').value = t?.symbol || '';
+  document.getElementById('tkName').value = t?.name || '';
+  document.getElementById('tkType').value = t?.type || 'stock';
+  document.getElementById('tkSector').value = t?.sector || '';
+  document.getElementById('tkIndustry').value = t?.industry || '';
+  document.getElementById('tkCountry').value = t?.country || '';
+  document.getElementById('tkCurrency').value = t?.currency || 'EUR';
+  document.getElementById('tkPrice').value = t?.price ?? '';
+  document.getElementById('tkDps').value = t?.dps ?? '';
+  document.getElementById('tkFreq').value = t?.freq ?? 4;
+  document.getElementById('tkExDate').value = t?.exDate || '';
+  document.getElementById('tkPayDate').value = t?.payDate || '';
+  document.getElementById('tkEarnDate').value = t?.earnDate || '';
+  document.getElementById('tkCmdDate').value = t?.cmdDate || '';
+  document.getElementById('tkAgmDate').value = t?.agmDate || '';
+  document.getElementById('tkAristocrat').checked = !!t?.aristocrat;
+  document.getElementById('tkDeleteBtn').classList.toggle('hidden', !t);
+  document.getElementById('tickerModal').classList.add('open');
+  setTimeout(() => document.getElementById('tkSymbol').focus(), 50);
+}
+function closeTickerModal() { document.getElementById('tickerModal').classList.remove('open'); editingTkId = null; }
+function saveTicker() {
+  const symbol = document.getElementById('tkSymbol').value.trim().toUpperCase();
+  if (!symbol) { appToast('Ticker is verplicht', { type: 'error' }); return; }
+  const data = {
+    symbol,
+    name: document.getElementById('tkName').value.trim(),
+    type: document.getElementById('tkType').value,
+    sector: document.getElementById('tkSector').value,
+    industry: document.getElementById('tkIndustry').value.trim(),
+    country: document.getElementById('tkCountry').value.trim().toUpperCase(),
+    currency: document.getElementById('tkCurrency').value,
+    price: parseFloat(document.getElementById('tkPrice').value) || null,
+    dps: parseFloat(document.getElementById('tkDps').value) || null,
+    freq: parseInt(document.getElementById('tkFreq').value, 10),
+    exDate: document.getElementById('tkExDate').value || null,
+    payDate: document.getElementById('tkPayDate').value || null,
+    earnDate: document.getElementById('tkEarnDate').value || null,
+    cmdDate: document.getElementById('tkCmdDate').value || null,
+    agmDate: document.getElementById('tkAgmDate').value || null,
+    aristocrat: document.getElementById('tkAristocrat').checked
+  };
+  if (editingTkId) {
+    Object.assign(rawState.tickers.find(t => t.id === editingTkId), data);
+  } else {
+    const exist = rawState.tickers.find(t => t.symbol === symbol);
+    if (exist) Object.assign(exist, data);
+    else rawState.tickers.push({ id: uid(), ...data });
+  }
+  scheduleSave(); closeTickerModal(); renderAll();
+  appToast('Ticker opgeslagen');
+}
+function deleteTicker() {
+  if (!editingTkId) return;
+  if (!confirm('Ticker verwijderen?')) return;
+  rawState.tickers = rawState.tickers.filter(t => t.id !== editingTkId);
+  scheduleSave(); closeTickerModal(); renderAll();
+}
+
+async function refreshFromTickerModal() {
+  const symbol = document.getElementById('tkSymbol').value.trim().toUpperCase();
+  if (!symbol) { appToast('Vul eerst een symbool in', { type: 'error' }); return; }
+  const btn = document.getElementById('tkRefreshBtn');
+  const orig = btn.innerHTML;
+  btn.disabled = true; btn.textContent = 'Bezig...';
+  try {
+    const data = await fetchYahooFullData(symbol);
+    if (!data) { appToast('Niet gevonden of alle proxies offline', { type: 'error' }); return; }
+    if (data.name) document.getElementById('tkName').value = data.name;
+    if (data.currency) document.getElementById('tkCurrency').value = data.currency;
+    if (data.price != null) document.getElementById('tkPrice').value = data.price;
+    if (data.dps != null) document.getElementById('tkDps').value = data.dps;
+    if (data.freq) document.getElementById('tkFreq').value = data.freq;
+    if (data.lastExDate) document.getElementById('tkExDate').value = data.lastExDate;
+    appToast(`${symbol} opgehaald — vergeet niet op te slaan`);
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CSV IMPORTER
+   ═══════════════════════════════════════════════════════════ */
+
+let csvData = null;
+let csvHeaders = [];
+
+const BROKER_PRESETS = {
+  degiro: {
+    transactions: { date: ['Datum'], ticker: ['Product', 'Ticker', 'Symbol'], qty: ['Aantal'], price: ['Koers'], fee: ['Transactiekosten'], currency: ['Mutatie', 'Valuta'], type: null },
+    dividends: { date: ['Datum'], ticker: ['Product'], gross: ['Bedrag'], tax: ['Bronbelasting'], currency: ['Valuta'] }
+  },
+  ibkr: {
+    transactions: { date: ['Date/Time', 'Date'], ticker: ['Symbol'], qty: ['Quantity'], price: ['T. Price', 'Price'], fee: ['Comm/Fee', 'Comm in EUR'], currency: ['Currency'] },
+    dividends: { date: ['Date'], ticker: ['Symbol'], gross: ['Amount'], tax: ['Tax'], currency: ['Currency'] }
+  },
+  trading212: {
+    transactions: { date: ['Time'], ticker: ['Ticker'], qty: ['No. of shares'], price: ['Price / share'], fee: ['Currency conversion fee', 'Finra fee'], currency: ['Currency (Price / share)'], type: ['Action'] },
+    dividends: { date: ['Time'], ticker: ['Ticker'], gross: ['Total'], tax: ['Withholding tax'], currency: ['Currency (Total)'] }
+  }
+};
+
+function openImportModal() {
+  document.getElementById('importModal').classList.add('open');
+  document.getElementById('csvPreview').classList.add('hidden');
+  document.getElementById('csvImportBtn').disabled = true;
+  document.getElementById('csvImportBtn').textContent = 'Importeer 0 rijen';
+  document.getElementById('csvPaste').value = '';
+  csvData = null;
+}
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('open');
+}
+
+function handleCsvFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { parseCsvText(e.target.result); document.getElementById('csvPaste').value = e.target.result.slice(0, 2000); };
+  reader.readAsText(file);
+}
+
+/* Tiny CSV parser supporting quoted fields, comma/semicolon delim */
+function parseCSV(text) {
+  if (!text || !text.trim()) return { headers: [], rows: [] };
+  text = text.replace(/^﻿/, '');
+  const firstLine = text.split(/\r?\n/)[0];
+  const delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === delim) { row.push(field); field = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (field !== '' || row.length) { row.push(field); rows.push(row); row = []; field = ''; }
+        if (c === '\r' && text[i + 1] === '\n') i++;
+      } else field += c;
+    }
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  if (!rows.length) return { headers: [], rows: [] };
+  const headers = rows.shift().map(h => h.trim());
+  return { headers, rows: rows.filter(r => r.some(c => c && c.trim())) };
+}
+
+function parseCsvText(text) {
+  if (!text || !text.trim()) {
+    document.getElementById('csvPreview').classList.add('hidden');
+    return;
+  }
+  const parsed = parseCSV(text);
+  if (!parsed.headers.length) return;
+  csvData = parsed.rows;
+  csvHeaders = parsed.headers;
+  renderCsvMapping();
+  applyBrokerPreset();
+  document.getElementById('csvPreview').classList.remove('hidden');
+  updateCsvSummary();
+}
+
+function renderCsvMapping() {
+  const sels = ['mapDate', 'mapTicker', 'mapType', 'mapQty', 'mapPrice', 'mapFee', 'mapCurrency', 'mapFx'];
+  sels.forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">—</option>';
+    csvHeaders.forEach((h, i) => {
+      const o = document.createElement('option'); o.value = i; o.textContent = h; sel.appendChild(o);
+    });
+    sel.onchange = updateCsvSummary;
+  });
+  document.getElementById('mapTypeWrap').classList.toggle('hidden', document.getElementById('csvKind').value === 'dividends');
+  /* Render preview table */
+  const wrap = document.getElementById('csvPreviewTable');
+  const max = Math.min(8, csvData.length);
+  let html = '<table><thead><tr>';
+  csvHeaders.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < max; i++) {
+    html += '<tr>';
+    csvHeaders.forEach((_, j) => html += `<td>${escapeHtml(csvData[i][j] || '')}</td>`);
+    html += '</tr>';
+  }
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+
+function applyBrokerPreset() {
+  const broker = document.getElementById('csvBroker').value;
+  const kind = document.getElementById('csvKind').value;
+  document.getElementById('mapTypeWrap').classList.toggle('hidden', kind === 'dividends');
+  if (!csvHeaders.length) return;
+  let preset = BROKER_PRESETS[broker]?.[kind];
+  if (broker === 'auto') {
+    /* try each */
+    for (const [name, p] of Object.entries(BROKER_PRESETS)) {
+      const cand = p[kind];
+      if (!cand) continue;
+      const hits = Object.values(cand).filter(arr => Array.isArray(arr) && arr.some(a => csvHeaders.some(h => h.toLowerCase().includes(a.toLowerCase())))).length;
+      if (hits >= 2) { preset = cand; break; }
+    }
+  }
+  const findCol = arr => {
+    if (!arr) return '';
+    for (const name of arr) {
+      const idx = csvHeaders.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+      if (idx >= 0) return idx;
+    }
+    return '';
+  };
+  if (preset) {
+    const map = {
+      mapDate: preset.date, mapTicker: preset.ticker, mapType: preset.type,
+      mapQty: preset.qty, mapPrice: preset.price || preset.gross, mapFee: preset.fee || preset.tax,
+      mapCurrency: preset.currency, mapFx: preset.fx
+    };
+    Object.entries(map).forEach(([id, arr]) => {
+      const sel = document.getElementById(id);
+      if (sel) sel.value = findCol(arr) ?? '';
+    });
+  }
+  updateCsvSummary();
+}
+
+function updateCsvSummary() {
+  const kind = document.getElementById('csvKind').value;
+  const dateIdx = document.getElementById('mapDate').value;
+  const tickerIdx = document.getElementById('mapTicker').value;
+  const qtyIdx = document.getElementById('mapQty').value;
+  const priceIdx = document.getElementById('mapPrice').value;
+  let valid = 0;
+  if (csvData && dateIdx !== '' && tickerIdx !== '' && priceIdx !== '') {
+    csvData.forEach(r => {
+      const date = parseCsvDate(r[+dateIdx]);
+      const ticker = (r[+tickerIdx] || '').trim();
+      const price = parseFloat((r[+priceIdx] || '').toString().replace(/[^\d.,-]/g, '').replace(',', '.'));
+      const qty = qtyIdx === '' ? 1 : parseFloat((r[+qtyIdx] || '').toString().replace(',', '.'));
+      if (date && ticker && !isNaN(price) && (kind === 'dividends' || !isNaN(qty))) valid++;
+    });
+  }
+  document.getElementById('csvSummary').textContent = `${csvData?.length || 0} rijen gelezen · ${valid} geldig`;
+  const btn = document.getElementById('csvImportBtn');
+  btn.disabled = valid === 0;
+  btn.textContent = `Importeer ${valid} ${valid === 1 ? 'rij' : 'rijen'}`;
+}
+
+function parseCsvDate(s) {
+  if (!s) return null;
+  s = s.trim();
+  /* Try ISO */
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  /* DD-MM-YYYY or DD/MM/YYYY */
+  m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  /* MM/DD/YYYY (US) */
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  return null;
+}
+
+function commitCsvImport() {
+  const kind = document.getElementById('csvKind').value;
+  const get = id => { const v = document.getElementById(id).value; return v === '' ? null : +v; };
+  const dateIdx = get('mapDate'), tickerIdx = get('mapTicker'), typeIdx = get('mapType');
+  const qtyIdx = get('mapQty'), priceIdx = get('mapPrice'), feeIdx = get('mapFee');
+  const currencyIdx = get('mapCurrency'), fxIdx = get('mapFx');
+  let added = 0, skipped = 0;
+  csvData.forEach(r => {
+    const date = parseCsvDate(r[dateIdx]);
+    const ticker = (r[tickerIdx] || '').trim().toUpperCase().split(/\s+/)[0];
+    const price = parseFloat((r[priceIdx] || '').toString().replace(/[^\d.,-]/g, '').replace(',', '.'));
+    const qty = qtyIdx == null ? 1 : Math.abs(parseFloat((r[qtyIdx] || '').toString().replace(',', '.')));
+    if (!date || !ticker || isNaN(price)) { skipped++; return; }
+    const fee = feeIdx != null ? Math.abs(parseFloat((r[feeIdx] || '0').toString().replace(',', '.')) || 0) : 0;
+    const currency = currencyIdx != null ? (r[currencyIdx] || 'EUR').trim().slice(0, 3).toUpperCase() : 'EUR';
+    const fx = fxIdx != null ? (parseFloat((r[fxIdx] || '1').toString().replace(',', '.')) || 1) : 1;
+    if (kind === 'transactions') {
+      let type = 'koop';
+      if (typeIdx != null) {
+        const raw = (r[typeIdx] || '').toLowerCase();
+        if (/sell|verk|sale/.test(raw)) type = 'verkoop';
+        else if (/div/.test(raw)) type = 'dividend';
+      }
+      rawState.transactions.push({ id: uid(), type, date, ticker, qty, price, fee, currency, fx, note: 'CSV import', portfolioId: rawState.activePortfolioId, createdAt: new Date().toISOString() });
+    } else {
+      rawState.dividends.push({ id: uid(), ticker, date, gross: Math.abs(price), tax: fee, currency, fx, note: 'CSV import', portfolioId: rawState.activePortfolioId, createdAt: new Date().toISOString() });
+    }
+    ensureTicker(ticker);
+    added++;
+  });
+  scheduleSave(); closeImportModal(); renderAll();
+  appToast(`${added} geïmporteerd, ${skipped} overgeslagen`);
+}
+
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+
+function renderDashboard() {
+  const c = document.getElementById('content');
+  const s = portfolioStats();
+  const tx = pfTransactions();
+  const dv = pfDividends();
+  if (!tx.length && !dv.length) {
+    c.innerHTML = `<div class="card"><div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18M7 14l3-3 4 4 5-6"/></svg>
+      <div class="empty-title">Nog geen data</div>
+      <div class="empty-msg">Voeg een transactie toe of importeer een CSV om te beginnen.</div>
+      <div class="flex gap-2 mt-2" style="justify-content:center;">
+        <button class="btn btn-primary" onclick="openTxModal()">Nieuwe transactie</button>
+        <button class="btn" onclick="openImportModal()">CSV importeren</button>
+      </div>
+    </div></div>`;
+    return;
+  }
+  const gainPct = s.invested > 0 ? ((s.currentValue - s.invested) / s.invested) * 100 : 0;
+  const cash = computeCash();
+  const realized = computeRealized();
+  const mwrr = computeMwrr();
+  const cagr = computeCagr();
+  const netWorth = s.currentValue + cash;
+  c.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Net worth</div><div class="kpi-value">${fmtEUR(netWorth)}</div><div class="kpi-sub">${fmtEUR(s.currentValue)} effecten + ${fmtEUR(cash)} cash</div></div>
+      <div class="kpi"><div class="kpi-label">Geïnvesteerd</div><div class="kpi-value">${fmtEUR(s.invested)}</div><div class="kpi-sub">${s.holdings.length} ${s.holdings.length === 1 ? 'positie' : 'posities'}</div></div>
+      <div class="kpi"><div class="kpi-label">Onrealised P&L</div><div class="kpi-value ${gainPct >= 0 ? 'pos' : 'neg'}" style="color:${gainPct >= 0 ? 'var(--success)' : 'var(--danger)'};">${gainPct >= 0 ? '+' : ''}${fmtEUR(s.currentValue - s.invested)}</div><div class="kpi-sub ${gainPct >= 0 ? 'pos' : 'neg'}">${gainPct >= 0 ? '+' : ''}${fmtPct(gainPct)}</div></div>
+      <div class="kpi"><div class="kpi-label">Realized P&L</div><div class="kpi-value ${realized >= 0 ? 'pos' : 'neg'}" style="color:${realized >= 0 ? 'var(--success)' : 'var(--danger)'};">${realized >= 0 ? '+' : ''}${fmtEUR(realized)}</div><div class="kpi-sub">uit verkopen</div></div>
+      <div class="kpi"><div class="kpi-label">MWRR</div><div class="kpi-value">${mwrr != null ? (mwrr >= 0 ? '+' : '') + fmtPct(mwrr, 2) : '—'}</div><div class="kpi-sub">money-weighted return</div></div>
+      <div class="kpi"><div class="kpi-label">CAGR</div><div class="kpi-value">${cagr != null ? (cagr >= 0 ? '+' : '') + fmtPct(cagr, 2) : '—'}</div><div class="kpi-sub">annualized growth</div></div>
+      <div class="kpi"><div class="kpi-label">Forward dividend</div><div class="kpi-value kpi-accent">${fmtEUR(s.forwardDiv)}</div><div class="kpi-sub">${fmtEUR(s.forwardDiv / 12)} / mnd</div></div>
+      <div class="kpi"><div class="kpi-label">Yield on cost</div><div class="kpi-value">${fmtPct(s.yoc)}</div><div class="kpi-sub">Yield nu: ${fmtPct(s.yieldNow)}</div></div>
+      <div class="kpi"><div class="kpi-label">Totaal ontvangen</div><div class="kpi-value">${fmtEUR(s.received)}</div><div class="kpi-sub">${dv.length} betalingen</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card full">
+        <div class="card-header"><div class="card-title">Net worth over tijd</div>
+          <div class="text-muted text-mono" style="font-size:12px;">cost basis vs marktwaarde + cash</div>
+        </div>
+        <div class="chart-wrap" id="nwChart"></div>
+      </div>
+      <div class="card full">
+        <div class="card-header"><div class="card-title">Dividend per maand</div>
+          <div class="seg" id="divChartScale">
+            <button class="seg-btn active" data-scale="month" onclick="setDivChartScale('month')">Maand</button>
+            <button class="seg-btn" data-scale="year" onclick="setDivChartScale('year')">Jaar</button>
+          </div>
+        </div>
+        <div class="chart-wrap" id="divChart"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Cumulatief dividend</div></div>
+        <div class="chart-wrap" id="cumChart"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Spreiding</div>
+          <div class="seg" id="spreadScale">
+            <button class="seg-btn active" data-spread="sector" onclick="setSpread('sector')">Sector</button>
+            <button class="seg-btn" data-spread="ticker" onclick="setSpread('ticker')">Aandeel</button>
+            <button class="seg-btn" data-spread="country" onclick="setSpread('country')">Land</button>
+            <button class="seg-btn" data-spread="currency" onclick="setSpread('currency')">Valuta</button>
+            <button class="seg-btn" data-spread="type" onclick="setSpread('type')">Type</button>
+          </div>
+        </div>
+        <div class="chart-wrap" id="pieChart"></div>
+      </div>
+    </div>
+  `;
+  renderNwChart();
+  renderDivChart();
+  renderCumChart();
+  renderPieChart();
+}
+
+function renderNwChart() {
+  const wrap = document.getElementById('nwChart');
+  if (!wrap) return;
+  const series = buildValueSeries();
+  if (series.length < 2) { wrap.innerHTML = '<div class="empty" style="padding:24px;">Te weinig data voor tijdreeks</div>'; return; }
+  const W = 800, H = 260, P = 48;
+  const maxV = Math.max(...series.map(s => Math.max(s.total || 0, s.invested || 0)));
+  const minT = new Date(series[0].date).getTime();
+  const maxT = new Date(series[series.length - 1].date).getTime() || minT + 1;
+  const xs = t => P + ((t - minT) / Math.max(1, maxT - minT)) * (W - P * 1.5);
+  const ys = v => H - P / 2 - (v / maxV) * (H - P * 1.5);
+  const pts = series.map(s => ({ x: xs(new Date(s.date).getTime()), invested: ys(s.invested), market: ys(s.marketValue), total: ys(s.total), raw: s }));
+  let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  for (let i = 0; i <= 4; i++) {
+    const y = P / 2 + (H - P) * (i / 4);
+    svg += `<line x1="${P}" y1="${y}" x2="${W - 8}" y2="${y}" stroke="currentColor" stroke-opacity="0.08"/>`;
+    svg += `<text x="${P - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.5" font-family="JetBrains Mono">${fmtEUR(maxV * (1 - i / 4))}</text>`;
+  }
+  const areaPath = 'M ' + pts.map(p => `${p.x} ${p.total}`).join(' L ') + ` L ${pts[pts.length - 1].x} ${H - P / 2} L ${pts[0].x} ${H - P / 2} Z`;
+  svg += `<path d="${areaPath}" fill="var(--mint)" opacity="0.13"/>`;
+  svg += `<path d="M ${pts.map(p => `${p.x} ${p.invested}`).join(' L ')}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  svg += `<path d="M ${pts.map(p => `${p.x} ${p.total}`).join(' L ')}" fill="none" stroke="var(--mint)" stroke-width="2.5"/>`;
+  /* x-axis labels — first, mid, last */
+  [0, Math.floor(series.length / 2), series.length - 1].forEach(i => {
+    svg += `<text x="${pts[i].x}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">${fmtMonth(series[i].date)}</text>`;
+  });
+  svg += '</svg>';
+  wrap.innerHTML = svg + `<div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--mint)"></span>Net worth (marktwaarde + cash)</div><div class="legend-item"><span class="legend-dot" style="background:var(--text-muted)"></span>Cost basis (geïnvesteerd)</div></div>`;
+}
+
+let _divChartScale = 'month';
+let _spread = 'sector';
+function setDivChartScale(s) { _divChartScale = s; document.querySelectorAll('#divChartScale .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.scale === s)); renderDivChart(); }
+function setSpread(s) { _spread = s; document.querySelectorAll('#spreadScale .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.spread === s)); renderPieChart(); }
+
+function renderDivChart() {
+  const wrap = document.getElementById('divChart');
+  if (!wrap) return;
+  const buckets = new Map();
+  pfDividends().forEach(d => {
+    const dt = new Date(d.date);
+    const key = _divChartScale === 'year' ? String(dt.getFullYear()) : `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    const eur = ((+d.gross || 0) - (+d.tax || 0)) * (+d.fx || 1);
+    buckets.set(key, (buckets.get(key) || 0) + eur);
+  });
+  if (!buckets.size) { wrap.innerHTML = '<div class="empty" style="padding:24px;">Nog geen dividenden ontvangen</div>'; return; }
+  const sorted = [...buckets.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const max = Math.max(...sorted.map(x => x[1]));
+  const W = 800, H = 240, P = 36;
+  const bw = (W - P * 2) / sorted.length;
+  let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  /* y gridlines */
+  for (let i = 0; i <= 4; i++) {
+    const y = P + (H - P * 1.5) * (i / 4);
+    const val = max * (1 - i / 4);
+    svg += `<line x1="${P}" y1="${y}" x2="${W - 8}" y2="${y}" stroke="currentColor" stroke-opacity="0.08"/>`;
+    svg += `<text x="${P - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.5" font-family="JetBrains Mono">${Math.round(val)}</text>`;
+  }
+  sorted.forEach(([k, v], i) => {
+    const x = P + i * bw + 2;
+    const w = bw - 4;
+    const h = max > 0 ? (v / max) * (H - P * 1.5) : 0;
+    const y = H - P / 2 - h;
+    const lbl = _divChartScale === 'year' ? k : fmtMonth(k + '-01');
+    svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="var(--mint)" opacity="0.85"><title>${lbl}: ${fmtEUR(v)}</title></rect>`;
+    if (sorted.length <= 24 || i % Math.ceil(sorted.length / 12) === 0) {
+      svg += `<text x="${x + w / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">${lbl}</text>`;
+    }
+  });
+  svg += '</svg>';
+  wrap.innerHTML = svg;
+}
+
+function renderCumChart() {
+  const wrap = document.getElementById('cumChart');
+  if (!wrap) return;
+  const sorted = pfDividends().slice().sort((a, b) => a.date.localeCompare(b.date));
+  if (!sorted.length) { wrap.innerHTML = '<div class="empty" style="padding:24px;">Nog geen data</div>'; return; }
+  let cum = 0;
+  const pts = sorted.map(d => { cum += ((+d.gross || 0) - (+d.tax || 0)) * (+d.fx || 1); return { date: d.date, cum }; });
+  const W = 400, H = 200, P = 36;
+  const max = pts[pts.length - 1].cum;
+  const minT = new Date(pts[0].date).getTime();
+  const maxT = new Date(pts[pts.length - 1].date).getTime() || minT + 1;
+  const xs = t => P + ((t - minT) / Math.max(1, maxT - minT)) * (W - P * 1.5);
+  const ys = v => H - P / 2 - (v / max) * (H - P * 1.5);
+  let path = `M ${xs(minT)} ${ys(0)}`;
+  pts.forEach(p => { path += ` L ${xs(new Date(p.date).getTime())} ${ys(p.cum)}`; });
+  const areaPath = path + ` L ${xs(maxT)} ${ys(0)} Z`;
+  let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  for (let i = 0; i <= 4; i++) {
+    const y = P / 2 + (H - P) * (i / 4);
+    svg += `<line x1="${P}" y1="${y}" x2="${W - 8}" y2="${y}" stroke="currentColor" stroke-opacity="0.08"/>`;
+  }
+  svg += `<path d="${areaPath}" fill="var(--mint)" opacity="0.18"/>`;
+  svg += `<path d="${path}" fill="none" stroke="var(--mint)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  svg += `<text x="${W - 8}" y="${P / 2 + 4}" text-anchor="end" font-size="11" fill="currentColor" opacity="0.6" font-family="JetBrains Mono">${fmtEUR(max)}</text>`;
+  svg += '</svg>';
+  wrap.innerHTML = svg;
+}
+
+function renderPieChart() {
+  const wrap = document.getElementById('pieChart');
+  if (!wrap) return;
+  const s = portfolioStats();
+  if (!s.holdings.length) { wrap.innerHTML = '<div class="empty" style="padding:24px;">Geen posities</div>'; return; }
+  /* Compute slices based on forward dividend by group (fallback to value if no dividend) */
+  const groups = new Map();
+  s.holdings.forEach(h => {
+    const tk = getTicker(h.ticker);
+    const fx = tk ? fxForCurrency(tk.currency) : 1;
+    let key;
+    if (_spread === 'sector') key = tk?.sector || 'Onbekend';
+    else if (_spread === 'country') key = tk?.country || 'Onbekend';
+    else if (_spread === 'currency') key = tk?.currency || 'EUR';
+    else if (_spread === 'type') {
+      const labels = { stock: 'Aandeel', etf: 'ETF', bond: 'Obligatie', fund: 'Fonds', crypto: 'Crypto', metal: 'Edelmetaal', reit: 'REIT', other: 'Overig' };
+      key = labels[tk?.type || 'stock'] || 'Aandeel';
+    } else key = h.ticker;
+    const div = (tk?.dps || 0) * h.qty * fx;
+    const value = h.qty * (tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0));
+    groups.set(key, (groups.get(key) || 0) + (div || value));
+  });
+  const items = [...groups.entries()].sort((a, b) => b[1] - a[1]);
+  const total = items.reduce((s, x) => s + x[1], 0);
+  if (total <= 0) { wrap.innerHTML = '<div class="empty" style="padding:24px;">Geen dividend-data</div>'; return; }
+  const colors = ['#00E5B0', '#5BB8F5', '#F5C25B', '#E96A6A', '#9B7BFF', '#FF9B5B', '#5BE5C2', '#D85BB8', '#7BD85B', '#5B8AFF', '#FFCC5B', '#B85BE5'];
+  const W = 360, H = 220, cx = 110, cy = 110, r = 92;
+  let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  let a0 = -Math.PI / 2;
+  items.forEach(([k, v], i) => {
+    const a1 = a0 + (v / total) * Math.PI * 2;
+    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const large = (a1 - a0) > Math.PI ? 1 : 0;
+    svg += `<path d="M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z" fill="${colors[i % colors.length]}" stroke="var(--surface)" stroke-width="1.5"><title>${k}: ${fmtEUR(v)} (${fmtPct(v / total * 100, 1)})</title></path>`;
+    a0 = a1;
+  });
+  /* legend */
+  let ly = 14;
+  items.slice(0, 8).forEach(([k, v], i) => {
+    svg += `<rect x="220" y="${ly}" width="10" height="10" rx="2" fill="${colors[i % colors.length]}"/>`;
+    svg += `<text x="236" y="${ly + 9}" font-size="11" fill="currentColor">${escapeHtml(k.slice(0, 16))} <tspan opacity="0.6" font-family="JetBrains Mono">${fmtPct(v / total * 100, 0)}</tspan></text>`;
+    ly += 18;
+  });
+  svg += '</svg>';
+  wrap.innerHTML = svg;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: TRANSACTIONS
+   ═══════════════════════════════════════════════════════════ */
+
+function renderTransactions() {
+  const c = document.getElementById('content');
+  const tx = pfTransactions().slice().sort((a, b) => b.date.localeCompare(a.date));
+  c.innerHTML = `
+    <div class="filter-bar">
+      <input class="input" id="txFilter" placeholder="Zoek ticker..." oninput="filterTxTable(this.value)">
+      <select class="select" id="txTypeFilter" onchange="filterTxType(this.value)">
+        <option value="">Alle types</option>
+        <option value="koop">Koop</option>
+        <option value="verkoop">Verkoop</option>
+        <option value="dividend">Dividend</option>
+        <option value="storting">Storting</option>
+        <option value="opname">Opname</option>
+      </select>
+      <span class="spacer"></span>
+      <span class="text-muted text-mono" style="font-size:12px;">${tx.length} transacties</span>
+    </div>
+    <div class="tbl-wrap">
+      ${tx.length === 0 ? `<div class="empty"><div class="empty-title">Geen transacties</div><div class="empty-msg">Klik op "Nieuwe transactie" of importeer een CSV.</div></div>` : `
+      <table class="tbl" id="txTable">
+        <thead><tr><th>Datum</th><th>Type</th><th>Ticker</th><th class="num">Aantal</th><th class="num">Prijs</th><th class="num">Kosten</th><th class="num">Totaal (EUR)</th><th></th></tr></thead>
+        <tbody>${tx.map(t => {
+          const isCash = t.type === 'storting' || t.type === 'opname';
+          const totalEur = isCash
+            ? (+t.amount || 0) * (+t.fx || 1) * (t.type === 'opname' ? -1 : 1)
+            : ((+t.qty || 0) * (+t.price || 0) + (t.type === 'koop' ? (+t.fee || 0) : -(+t.fee || 0))) * (+t.fx || 1);
+          const totalClass = (t.type === 'verkoop' || t.type === 'storting') ? 'pos' : (t.type === 'opname' ? 'neg' : '');
+          return `
+          <tr data-ticker="${escapeHtml(t.ticker || '')}" data-type="${t.type}">
+            <td>${fmtDate(t.date)}</td>
+            <td><span class="type-pill type-${t.type}">${t.type}</span></td>
+            <td class="ticker-cell">${isCash ? '<span class="text-muted">cash</span>' : escapeHtml(t.ticker)}</td>
+            <td class="num">${isCash ? '—' : fmtNum(t.qty, 4)}</td>
+            <td class="num">${isCash ? fmtNum(t.amount || 0, 2) + ' ' + escapeHtml(t.currency || '') : fmtNum(t.price, 2) + ' ' + escapeHtml(t.currency || '')}</td>
+            <td class="num">${fmtNum(t.fee || 0, 2)}</td>
+            <td class="num ${totalClass}">${fmtEUR(Math.abs(totalEur)) }${t.type === 'opname' ? ' uit' : ''}</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="openTxModal('${t.id}')">Bewerk</button></td>
+          </tr>`;}).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  `;
+}
+function filterTxTable(q) {
+  q = (q || '').toLowerCase();
+  document.querySelectorAll('#txTable tbody tr').forEach(tr => {
+    const match = !q || tr.dataset.ticker.toLowerCase().includes(q);
+    const typeF = document.getElementById('txTypeFilter').value;
+    const typeMatch = !typeF || tr.dataset.type === typeF;
+    tr.style.display = (match && typeMatch) ? '' : 'none';
+  });
+}
+function filterTxType(v) { filterTxTable(document.getElementById('txFilter').value); }
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: DIVIDENDS
+   ═══════════════════════════════════════════════════════════ */
+
+function renderDividends() {
+  const c = document.getElementById('content');
+  const dv = pfDividends().slice().sort((a, b) => b.date.localeCompare(a.date));
+  const total = dv.reduce((s, d) => s + ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)), 0);
+  c.innerHTML = `
+    <div class="filter-bar">
+      <input class="input" id="divFilter" placeholder="Zoek ticker..." oninput="filterDivTable(this.value)">
+      <span class="spacer"></span>
+      <span class="text-muted text-mono" style="font-size:12px;">${dv.length} betalingen · ${fmtEUR(total)} netto</span>
+    </div>
+    <div class="tbl-wrap">
+      ${dv.length === 0 ? `<div class="empty"><div class="empty-title">Geen dividenden</div><div class="empty-msg">Voeg ontvangen dividenden toe of importeer ze via CSV.</div></div>` : `
+      <table class="tbl" id="divTable">
+        <thead><tr><th>Datum</th><th>Ticker</th><th class="num">Bruto</th><th class="num">Belasting</th><th class="num">Netto (EUR)</th><th>Valuta</th><th></th></tr></thead>
+        <tbody>${dv.map(d => `
+          <tr data-ticker="${escapeHtml(d.ticker)}">
+            <td>${fmtDate(d.date)}</td>
+            <td class="ticker-cell">${escapeHtml(d.ticker)}</td>
+            <td class="num">${fmtNum(d.gross, 2)}</td>
+            <td class="num">${fmtNum(d.tax || 0, 2)}</td>
+            <td class="num pos">${fmtEUR((d.gross - (d.tax || 0)) * (d.fx || 1))}</td>
+            <td>${escapeHtml(d.currency || 'EUR')}</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="openDivModal('${d.id}')">Bewerk</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  `;
+}
+function filterDivTable(q) {
+  q = (q || '').toLowerCase();
+  document.querySelectorAll('#divTable tbody tr').forEach(tr => {
+    tr.style.display = (!q || tr.dataset.ticker.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: HOLDINGS
+   ═══════════════════════════════════════════════════════════ */
+
+function renderHoldings() {
+  const c = document.getElementById('content');
+  const holdings = computeHoldings().sort((a, b) => b.costEur - a.costEur);
+  if (!holdings.length) {
+    c.innerHTML = `<div class="card"><div class="empty"><div class="empty-title">Geen open posities</div><div class="empty-msg">Voeg eerst koop-transacties toe.</div></div></div>`;
+    return;
+  }
+  const totalCost = holdings.reduce((s, h) => s + h.costEur, 0);
+  const totalValue = holdings.reduce((s, h) => {
+    const tk = getTicker(h.ticker);
+    const fx = tk ? fxForCurrency(tk.currency) : 1;
+    const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
+    return s + h.qty * priceEur;
+  }, 0);
+  const cash = computeCash();
+  c.innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:16px;">
+      <div class="kpi"><div class="kpi-label">Posities</div><div class="kpi-value">${holdings.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Kostprijs</div><div class="kpi-value">${fmtEUR(totalCost)}</div></div>
+      <div class="kpi"><div class="kpi-label">Marktwaarde</div><div class="kpi-value">${fmtEUR(totalValue)}</div></div>
+      <div class="kpi"><div class="kpi-label">Cash</div><div class="kpi-value">${fmtEUR(cash)}</div><div class="kpi-sub">vrij beschikbaar</div></div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Ticker</th><th>Sector</th><th class="num">Aantal</th><th class="num">Gem. kostprijs</th><th class="num">Huidige koers</th><th class="num">Waarde (EUR)</th><th class="num">P&L</th><th class="num">Div/aandeel</th><th class="num">Forward div</th><th class="num">YOC</th></tr></thead>
+        <tbody>${holdings.map(h => {
+          const tk = getTicker(h.ticker);
+          const fx = tk ? fxForCurrency(tk.currency) : 1;
+          const avgCost = h.qty > 0 ? h.costEur / h.qty : 0;
+          const priceEur = tk?.price ? tk.price * fx : avgCost;
+          const value = h.qty * priceEur;
+          const pl = value - h.costEur;
+          const plPct = h.costEur > 0 ? (pl / h.costEur) * 100 : 0;
+          const fwdDiv = (tk?.dps || 0) * h.qty * fx;
+          const yoc = h.costEur > 0 ? (fwdDiv / h.costEur) * 100 : 0;
+          return `<tr style="cursor:pointer" onclick="openTickerModal('${tk?.id || ''}')">
+            <td class="ticker-cell">${escapeHtml(h.ticker)}${tk?.aristocrat ? ' <span style="color:var(--gold);font-size:11px;" title="Aristocrat">♛</span>' : ''}</td>
+            <td class="text-muted">${escapeHtml(tk?.sector || '—')}</td>
+            <td class="num">${fmtNum(h.qty, 4)}</td>
+            <td class="num">${fmtEUR(avgCost)}</td>
+            <td class="num">${tk?.price ? fmtNum(tk.price, 2) + ' ' + (tk?.currency || '') : '—'}</td>
+            <td class="num">${fmtEUR(value)}</td>
+            <td class="num ${pl >= 0 ? 'pos' : 'neg'}">${pl >= 0 ? '+' : ''}${fmtEUR(pl)} (${fmtPct(plPct, 1)})</td>
+            <td class="num">${tk?.dps ? fmtNum(tk.dps, 2) : '—'}</td>
+            <td class="num">${fwdDiv > 0 ? fmtEUR(fwdDiv) : '—'}</td>
+            <td class="num">${yoc > 0 ? fmtPct(yoc, 2) : '—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <div class="text-muted mt-2" style="font-size:12px;">Tip: klik een rij om koers, dividend en sector aan te vullen.</div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: CALENDAR
+   ═══════════════════════════════════════════════════════════ */
+
+function renderCalendar() {
+  const c = document.getElementById('content');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const heldTickers = new Set(computeHoldings().map(h => h.ticker));
+  const upcoming = [];
+  const holdings = computeHoldings();
+  rawState.tickers.forEach(t => {
+    if (!heldTickers.has(t.symbol)) return;
+    const holding = holdings.find(h => h.ticker === t.symbol);
+    const qty = holding?.qty || 0;
+    const divAmount = (t.dps || 0) * qty / (t.freq || 4);
+    const push = (date, kind, kindClass, amount) => {
+      if (!date) return;
+      if (new Date(date) < today) return;
+      upcoming.push({ date, kind, kindClass, ticker: t.symbol, amount, currency: t.currency });
+    };
+    push(t.exDate, 'Ex-div', 'type-verkoop', divAmount);
+    push(t.payDate, 'Payment', 'type-dividend', divAmount);
+    push(t.earnDate, 'Earnings', 'type-earnings', 0);
+    push(t.cmdDate, 'CMD', 'type-cmd', 0);
+    push(t.agmDate, 'AGM', 'type-agm', 0);
+  });
+  upcoming.sort((a, b) => a.date.localeCompare(b.date));
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-header"><div class="card-title">Komende dividend-events</div>
+        <div class="text-muted text-mono" style="font-size:12px;">${upcoming.length} events</div>
+      </div>
+      ${upcoming.length === 0 ? `<div class="empty"><div class="empty-title">Geen komende dividenden</div><div class="empty-msg">Vul ex-div en payment-data in bij je tickers (klik op een ticker).</div></div>` : `
+      <div class="cal-list">
+        ${upcoming.map(u => {
+          const d = new Date(u.date);
+          return `<div class="cal-item">
+            <div class="cal-date">
+              <div class="cal-date-day">${d.getDate()}</div>
+              <div class="cal-date-month">${d.toLocaleDateString('nl-NL', { month: 'short' })} ${d.getFullYear()}</div>
+            </div>
+            <div>
+              <div class="cal-info-ticker">${escapeHtml(u.ticker)} <span class="type-pill ${u.kindClass}" style="margin-left:6px;">${u.kind}</span></div>
+              <div class="cal-info-sub">${fmtDate(u.date)}</div>
+            </div>
+            <div class="cal-amount">${u.amount > 0 ? '≈ ' + fmtNum(u.amount, 2) + ' ' + (u.currency || '') : ''}</div>
+          </div>`;
+        }).join('')}
+      </div>`}
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: PROJECTION
+   ═══════════════════════════════════════════════════════════ */
+
+function renderProjection() {
+  const c = document.getElementById('content');
+  const s = portfolioStats();
+  c.innerHTML = `
+    <div class="card mb-2" style="margin-bottom:16px;">
+      <div class="card-header"><div class="card-title">Aannames</div></div>
+      <div class="modal-grid">
+        <div><label>Verwachte dividend-groei (%/jaar)</label><input class="input" type="number" step="any" id="projDivGrowth" value="6" oninput="renderProjResult()"></div>
+        <div><label>Verwachte koerswinst (%/jaar)</label><input class="input" type="number" step="any" id="projPriceGrowth" value="7" oninput="renderProjResult()"></div>
+        <div><label>Maandelijkse inleg (EUR)</label><input class="input" type="number" step="any" id="projContrib" value="0" oninput="renderProjResult()"></div>
+        <div><label>Belasting op dividend (%)</label><input class="input" type="number" step="any" id="projTaxRate" value="15" oninput="renderProjResult()"></div>
+        <div><label>DRIP (herinvesteer dividend)</label>
+          <select class="select" id="projDrip" onchange="renderProjResult()">
+            <option value="1" selected>Ja</option><option value="0">Nee</option>
+          </select>
+        </div>
+        <div><label>Horizon (jaren)</label><input class="input" type="number" id="projYears" value="20" oninput="renderProjResult()"></div>
+      </div>
+    </div>
+    <div id="projResult"></div>
+  `;
+  renderProjResult();
+}
+
+function renderProjResult() {
+  const s = portfolioStats();
+  const divGrowth = parseFloat(document.getElementById('projDivGrowth').value) / 100 || 0;
+  const priceGrowth = parseFloat(document.getElementById('projPriceGrowth').value) / 100 || 0;
+  const contrib = parseFloat(document.getElementById('projContrib').value) || 0;
+  const taxRate = parseFloat(document.getElementById('projTaxRate').value) / 100 || 0;
+  const drip = document.getElementById('projDrip').value === '1';
+  const years = Math.max(1, Math.min(50, parseInt(document.getElementById('projYears').value) || 20));
+  let value = s.currentValue || s.invested;
+  let div = s.forwardDiv;
+  const series = [];
+  for (let y = 0; y <= years; y++) {
+    series.push({ year: y, value, div, netDiv: div * (1 - taxRate) });
+    const newContrib = contrib * 12;
+    value = value * (1 + priceGrowth) + newContrib;
+    if (drip) value += div * (1 - taxRate);
+    div = div * (1 + divGrowth) + newContrib * (div && value ? (div / value) : 0);
+  }
+  const targets = [5, 10, 20].filter(t => t <= years);
+  const c = document.getElementById('projResult');
+  c.innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:16px;">
+      ${targets.map(t => {
+        const p = series[t];
+        return `<div class="kpi"><div class="kpi-label">Over ${t} jaar</div>
+          <div class="kpi-value">${fmtEUR(p.value)}</div>
+          <div class="kpi-sub">Netto div: <span class="kpi-accent">${fmtEUR(p.netDiv)}</span>/jr</div></div>`;
+      }).join('')}
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Groei (waarde + netto dividend)</div></div>
+      <div class="chart-wrap" id="projChart"></div>
+    </div>
+  `;
+  /* draw chart */
+  const W = 800, H = 280, P = 44;
+  const maxV = Math.max(...series.map(s => s.value));
+  const pathPts = series.map((p, i) => [P + i / years * (W - P * 1.5), H - P / 2 - (p.value / maxV) * (H - P * 1.5)]);
+  const divPts = series.map((p, i) => [P + i / years * (W - P * 1.5), H - P / 2 - (p.netDiv * 10 / maxV) * (H - P * 1.5)]);
+  let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  for (let i = 0; i <= 4; i++) {
+    const y = P / 2 + (H - P) * (i / 4);
+    svg += `<line x1="${P}" y1="${y}" x2="${W - 8}" y2="${y}" stroke="currentColor" stroke-opacity="0.08"/>`;
+    svg += `<text x="${P - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.5" font-family="JetBrains Mono">${fmtEUR(maxV * (1 - i / 4))}</text>`;
+  }
+  const areaPath = 'M ' + pathPts.map(p => p.join(' ')).join(' L ') + ` L ${pathPts[pathPts.length - 1][0]} ${H - P / 2} L ${P} ${H - P / 2} Z`;
+  svg += `<path d="${areaPath}" fill="var(--mint)" opacity="0.15"/>`;
+  svg += `<path d="M ${pathPts.map(p => p.join(' ')).join(' L ')}" fill="none" stroke="var(--mint)" stroke-width="2.5"/>`;
+  svg += `<path d="M ${divPts.map(p => p.join(' ')).join(' L ')}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-dasharray="4 3"/>`;
+  series.forEach((p, i) => {
+    if (i % Math.max(1, Math.ceil(years / 10)) === 0) {
+      svg += `<text x="${P + i / years * (W - P * 1.5)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">${p.year}</text>`;
+    }
+  });
+  svg += '</svg>';
+  document.getElementById('projChart').innerHTML = svg + `<div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--mint)"></span>Portefeuille-waarde</div><div class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span>Netto dividend / jaar (×10 schaal)</div></div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: TICKERS
+   ═══════════════════════════════════════════════════════════ */
+
+function renderTickers() {
+  const c = document.getElementById('content');
+  const tickers = rawState.tickers.slice().sort((a, b) => a.symbol.localeCompare(b.symbol));
+  c.innerHTML = `
+    <div class="filter-bar">
+      <input class="input" id="tkFilter" placeholder="Zoek..." oninput="filterTickers(this.value)">
+      <span class="spacer"></span>
+      <span class="text-muted text-mono" style="font-size:12px;">${tickers.length} tickers</span>
+    </div>
+    <div class="tbl-wrap">
+      ${tickers.length === 0 ? `<div class="empty"><div class="empty-title">Geen tickers</div><div class="empty-msg">Tickers verschijnen automatisch wanneer je transacties toevoegt.</div></div>` : `
+      <table class="tbl" id="tkTable">
+        <thead><tr><th>Symbool</th><th>Naam</th><th>Type</th><th>Sector</th><th>Industrie</th><th>Land</th><th class="num">Koers</th><th class="num">Div/aandeel</th><th class="num">Freq</th><th>Ex-div</th><th>Payment</th></tr></thead>
+        <tbody>${tickers.map(t => {
+          const typeLabels = { stock: 'Aandeel', etf: 'ETF', bond: 'Obligatie', fund: 'Fonds', crypto: 'Crypto', metal: 'Metaal', reit: 'REIT', other: 'Overig' };
+          return `
+          <tr data-q="${escapeHtml((t.symbol + ' ' + (t.name || '') + ' ' + (t.industry || '')).toLowerCase())}" style="cursor:pointer" onclick="openTickerModal('${t.id}')">
+            <td class="ticker-cell">${escapeHtml(t.symbol)}${t.aristocrat ? ' <span style="color:var(--gold)" title="Aristocrat">♛</span>' : ''}</td>
+            <td>${escapeHtml(t.name || '')}</td>
+            <td class="text-muted">${escapeHtml(typeLabels[t.type || 'stock'] || 'Aandeel')}</td>
+            <td class="text-muted">${escapeHtml(t.sector || '—')}</td>
+            <td class="text-muted">${escapeHtml(t.industry || '—')}</td>
+            <td class="text-muted">${escapeHtml(t.country || '—')}</td>
+            <td class="num">${t.price ? fmtNum(t.price, 2) + ' ' + escapeHtml(t.currency || '') : '—'}</td>
+            <td class="num">${t.dps ? fmtNum(t.dps, 2) : '—'}</td>
+            <td class="num">${t.freq ? t.freq + 'x' : '—'}</td>
+            <td>${fmtDate(t.exDate)}</td>
+            <td>${fmtDate(t.payDate)}</td>
+          </tr>`;}).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  `;
+}
+function filterTickers(q) {
+  q = (q || '').toLowerCase();
+  document.querySelectorAll('#tkTable tbody tr').forEach(tr => {
+    tr.style.display = (!q || tr.dataset.q.includes(q)) ? '' : 'none';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER: SETTINGS
+   ═══════════════════════════════════════════════════════════ */
+
+function renderSettings() {
+  const c = document.getElementById('content');
+  const hasToken = !!localStorage.getItem(LS_TOKEN_KEY);
+  c.innerHTML = `
+    <div class="card mb-2" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Portefeuilles</div>
+        <div class="card-actions"><button class="btn btn-sm" onclick="openPfModal()">+ Nieuwe</button></div>
+      </div>
+      <div>${rawState.portfolios.map(p => `
+        <div class="settings-row">
+          <div class="settings-label">
+            <div class="settings-label-title">${escapeHtml(p.name)}${p.id === rawState.activePortfolioId ? ' <span class="type-pill type-dividend" style="margin-left:6px;">actief</span>' : ''}</div>
+            <div class="settings-label-desc">${rawState.transactions.filter(t => t.portfolioId === p.id).length} transacties · ${rawState.dividends.filter(d => d.portfolioId === p.id).length} dividenden</div>
+          </div>
+          <button class="btn btn-sm" onclick="openPfModal('${p.id}')">Bewerk</button>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card mb-2" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Marktdata</div></div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Yahoo Finance ophalen</div>
+          <div class="settings-label-desc">Haalt koers, dividenden, frequentie en ex-div datums op via CORS-proxy. ${yahooLastFetchAgo() ? 'Laatst: ' + yahooLastFetchAgo() : 'Nog niet uitgevoerd'}</div>
+        </div>
+        <button class="btn btn-primary" onclick="refreshAllTickers()">Refresh nu</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Auto-refresh bij openen</div>
+          <div class="settings-label-desc">Haalt automatisch nieuwe data op als laatste fetch > 20 uur geleden was</div>
+        </div>
+        <div class="seg">
+          <button class="seg-btn ${rawState.settings.autoRefresh ? 'active' : ''}" onclick="setAutoRefresh(true)">Aan</button>
+          <button class="seg-btn ${!rawState.settings.autoRefresh ? 'active' : ''}" onclick="setAutoRefresh(false)">Uit</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-2" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Synchronisatie</div></div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">GitHub Gist</div>
+          <div class="settings-label-desc">${hasToken ? 'Verbonden — data wordt automatisch gesynchroniseerd' : 'Niet verbonden — data leeft alleen in deze browser'}</div>
+        </div>
+        <button class="btn" onclick="openGistModal()">${hasToken ? 'Beheren' : 'Verbinden'}</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Export data</div>
+          <div class="settings-label-desc">Download alle data als JSON-backup</div>
+        </div>
+        <button class="btn" onclick="exportJSON()">Download</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Import data</div>
+          <div class="settings-label-desc">Herstel uit JSON-backup (overschrijft huidige data)</div>
+        </div>
+        <button class="btn" onclick="document.getElementById('importJsonFile').click()">Importeer</button>
+        <input type="file" id="importJsonFile" accept=".json" class="hidden" onchange="importJSON(this.files[0])">
+      </div>
+    </div>
+
+    <div class="card mb-2" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Weergave</div></div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Thema</div>
+          <div class="settings-label-desc">Light / Dark / volg systeem</div>
+        </div>
+        <div class="seg">
+          <button class="seg-btn ${rawState.settings.theme === 'auto' ? 'active' : ''}" onclick="setTheme('auto')">Auto</button>
+          <button class="seg-btn ${rawState.settings.theme === 'light' ? 'active' : ''}" onclick="setTheme('light')">Light</button>
+          <button class="seg-btn ${rawState.settings.theme === 'dark' ? 'active' : ''}" onclick="setTheme('dark')">Dark</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Data wissen</div></div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Alle data verwijderen</div>
+          <div class="settings-label-desc">Verwijdert alle portefeuilles, transacties, dividenden en tickers</div>
+        </div>
+        <button class="btn btn-danger" onclick="wipeAll()">Wis alles</button>
+      </div>
+    </div>
+  `;
+}
+
+function setTheme(t) {
+  rawState.settings.theme = t;
+  applyTheme();
+  scheduleSave();
+  renderSettings();
+}
+function setAutoRefresh(on) {
+  rawState.settings.autoRefresh = !!on;
+  scheduleSave();
+  renderSettings();
+}
+function applyTheme() {
+  const t = rawState.settings?.theme || 'auto';
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(rawState, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `dividend-tracker-${todayISO()}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+function importJSON(file) {
+  if (!file) return;
+  if (!confirm('Huidige data wordt overschreven. Doorgaan?')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      rawState = JSON.parse(e.target.result);
+      initState(); scheduleSave(); renderAll();
+      appToast('Data geïmporteerd');
+    } catch (err) { appToast('Import mislukt: ' + err.message, { type: 'error' }); }
+  };
+  reader.readAsText(file);
+}
+function wipeAll() {
+  if (!confirm('ALLES wissen? Dit kan niet ongedaan worden gemaakt.')) return;
+  if (!confirm('Echt zeker? Alle portefeuilles, transacties en dividenden worden verwijderd.')) return;
+  rawState = { portfolios: [], activePortfolioId: null, transactions: [], dividends: [], tickers: [], settings: rawState.settings };
+  initState(); scheduleSave(); renderAll();
+  appToast('Alles gewist');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GIST MODAL
+   ═══════════════════════════════════════════════════════════ */
+
+function openGistModal() {
+  document.getElementById('gistToken').value = localStorage.getItem(LS_TOKEN_KEY) || '';
+  document.getElementById('gistId').value = localStorage.getItem(LS_GIST_KEY) || '';
+  document.getElementById('gistModal').classList.add('open');
+}
+function closeGistModal() { document.getElementById('gistModal').classList.remove('open'); }
+function saveGistConfig() {
+  const token = document.getElementById('gistToken').value.trim().replace(/[​-‍﻿]/g, '');
+  const id = document.getElementById('gistId').value.trim();
+  if (!token) { appToast('Token is verplicht', { type: 'error' }); return; }
+  localStorage.setItem(LS_TOKEN_KEY, token);
+  if (id) localStorage.setItem(LS_GIST_KEY, id);
+  closeGistModal();
+  appToast('Verbonden, sync wordt gestart');
+  saveGist();
+  renderSettings();
+}
+function clearGistSync() {
+  if (!confirm('Sync loskoppelen? Data blijft lokaal bewaard.')) return;
+  localStorage.removeItem(LS_TOKEN_KEY);
+  localStorage.removeItem(LS_GIST_KEY);
+  closeGistModal();
+  setSync('idle', 'Lokaal');
+  renderSettings();
+  appToast('Sync losgekoppeld');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════════ */
+
+window.addEventListener('hashchange', renderAll);
+window.addEventListener('DOMContentLoaded', async () => {
+  initState();
+  applyTheme();
+  renderAll();
+  await loadGist();
+  autoRefreshOnBoot();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+});
+
+</script>
+</body>
+</html>

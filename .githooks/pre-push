@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Pre-push hook for Dividend Tracker.
+# Activate: git config core.hooksPath .githooks
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Block force-push unless explicitly allowed
+if [ "$ALLOW_FORCE_PUSH" != "1" ]; then
+  while read local_ref local_sha remote_ref remote_sha; do
+    if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
+      if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        echo "✗ Non-fast-forward push detected to $remote_ref"
+        echo "  Set ALLOW_FORCE_PUSH=1 if intentional."
+        exit 1
+      fi
+    fi
+  done
+fi
+
+# Validate
+if [ -f validate.mjs ]; then
+  echo "→ Running validate.mjs..."
+  node validate.mjs
+fi
+
+echo "✓ Pre-push checks passed"
