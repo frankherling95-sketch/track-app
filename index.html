@@ -865,6 +865,7 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
       <label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;margin:0;align-self:center;">Broker:</label>
       <select class="select" id="csvBroker" style="width:auto;" onchange="applyBrokerPreset()">
         <option value="auto">Auto-detect</option>
+        <option value="tradeRepublic">Trade Republic</option>
         <option value="degiro">DeGiro</option>
         <option value="ibkr">Interactive Brokers</option>
         <option value="trading212">Trading 212</option>
@@ -2293,6 +2294,43 @@ async function fetchBenchmarkHistory(symbol, range = '1y') {
   return data;
 }
 
+/* ISIN → ticker lookup via Yahoo search. Cached in localStorage. */
+const LS_ISIN_CACHE = 'herling_dividend_isin_cache_v1';
+function isinCacheGet(isin) {
+  try {
+    const c = JSON.parse(localStorage.getItem(LS_ISIN_CACHE) || '{}');
+    return c[isin] || null;
+  } catch (e) { return null; }
+}
+function isinCacheSet(isin, ticker) {
+  try {
+    const c = JSON.parse(localStorage.getItem(LS_ISIN_CACHE) || '{}');
+    c[isin] = ticker;
+    localStorage.setItem(LS_ISIN_CACHE, JSON.stringify(c));
+  } catch (e) {}
+}
+async function isinToTicker(isin, fallbackName) {
+  if (!isin || !/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(isin)) return isin; /* not an ISIN, use as-is */
+  const cached = isinCacheGet(isin);
+  if (cached) return cached;
+  const results = await yahooSearch(isin);
+  const best = results[0];
+  if (best?.symbol) {
+    isinCacheSet(isin, best.symbol);
+    return best.symbol;
+  }
+  /* Fallback: search by company name */
+  if (fallbackName) {
+    const nameResults = await yahooSearch(fallbackName);
+    if (nameResults[0]?.symbol) {
+      isinCacheSet(isin, nameResults[0].symbol);
+      return nameResults[0].symbol;
+    }
+  }
+  /* Last resort: use ISIN as ticker so import doesn't fail */
+  return isin;
+}
+
 /* Yahoo Finance search — finds tickers by name or symbol */
 async function yahooSearch(q) {
   if (!q || q.trim().length < 2) return [];
@@ -2937,6 +2975,10 @@ let csvData = null;
 let csvHeaders = [];
 
 const BROKER_PRESETS = {
+  tradeRepublic: {
+    transactions: { date: ['date'], ticker: ['symbol'], qty: ['shares'], price: ['price'], fee: ['fee'], currency: ['currency'], type: ['type'] },
+    dividends:    { date: ['date'], ticker: ['symbol'], gross: ['amount'], tax: ['tax'], currency: ['currency'] }
+  },
   degiro: {
     transactions: { date: ['Datum'], ticker: ['Product', 'Ticker', 'Symbol'], qty: ['Aantal'], price: ['Koers'], fee: ['Transactiekosten'], currency: ['Mutatie', 'Valuta'], type: null },
     dividends: { date: ['Datum'], ticker: ['Product'], gross: ['Bedrag'], tax: ['Bronbelasting'], currency: ['Valuta'] }
@@ -3040,11 +3082,27 @@ function renderCsvMapping() {
   wrap.innerHTML = html;
 }
 
+function detectTradeRepublic() {
+  if (!csvHeaders.length) return false;
+  const lower = csvHeaders.map(h => h.toLowerCase());
+  return lower.includes('datetime') && lower.includes('account_type') && lower.includes('asset_class') && lower.includes('category');
+}
+
 function applyBrokerPreset() {
   const broker = document.getElementById('csvBroker').value;
   const kind = document.getElementById('csvKind').value;
   document.getElementById('mapTypeWrap').classList.toggle('hidden', kind === 'dividends');
   if (!csvHeaders.length) return;
+  /* Trade Republic auto-detect */
+  if ((broker === 'auto' || broker === 'tradeRepublic') && detectTradeRepublic()) {
+    document.getElementById('csvBroker').value = 'tradeRepublic';
+    document.getElementById('csvSummary').innerHTML = `<strong style="color:var(--success)">Trade Republic CSV gedetecteerd</strong> — alle types (BUY/SELL/DIVIDEND/STOCKPERK/CUSTOMER_INBOUND/OUTBOUND/INTEREST_PAYMENT) worden automatisch verwerkt. ISIN's worden via Yahoo opgezocht voor echte tickers.`;
+    document.getElementById('csvImportBtn').disabled = false;
+    document.getElementById('csvImportBtn').textContent = `Importeer ${csvData.length} rijen (TR-modus)`;
+    /* Hide mapping ui */
+    document.querySelectorAll('.csv-map select').forEach(s => { s.value = ''; });
+    return;
+  }
   let preset = BROKER_PRESETS[broker]?.[kind];
   if (broker === 'auto') {
     /* try each */
@@ -3114,7 +3172,11 @@ function parseCsvDate(s) {
   return null;
 }
 
-function commitCsvImport() {
+async function commitCsvImport() {
+  const broker = document.getElementById('csvBroker').value;
+  if (broker === 'tradeRepublic' || (broker === 'auto' && detectTradeRepublic())) {
+    return commitTradeRepublicImport();
+  }
   const kind = document.getElementById('csvKind').value;
   const get = id => { const v = document.getElementById(id).value; return v === '' ? null : +v; };
   const dateIdx = get('mapDate'), tickerIdx = get('mapTicker'), typeIdx = get('mapType');
@@ -3146,6 +3208,149 @@ function commitCsvImport() {
   });
   scheduleSave(); closeImportModal(); renderAll();
   appToast(`${added} geïmporteerd, ${skipped} overgeslagen`);
+}
+
+/* Trade Republic specifieke importer. Handelt alle action-types af + ISIN→ticker lookup. */
+async function commitTradeRepublicImport() {
+  const colIdx = name => csvHeaders.findIndex(h => h.toLowerCase() === name.toLowerCase());
+  const idx = {
+    date: colIdx('date'),
+    cat: colIdx('category'),
+    type: colIdx('type'),
+    assetClass: colIdx('asset_class'),
+    name: colIdx('name'),
+    symbol: colIdx('symbol'),
+    shares: colIdx('shares'),
+    price: colIdx('price'),
+    amount: colIdx('amount'),
+    fee: colIdx('fee'),
+    tax: colIdx('tax'),
+    currency: colIdx('currency'),
+    origAmount: colIdx('original_amount'),
+    origCurrency: colIdx('original_currency'),
+    fxRate: colIdx('fx_rate'),
+    description: colIdx('description'),
+    txId: colIdx('transaction_id'),
+  };
+  const pfId = rawState.activePortfolioId;
+  const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+
+  /* Step 1: collect unique ISINs that need lookup */
+  const uniqueIsins = new Set();
+  csvData.forEach(r => {
+    const sym = (r[idx.symbol] || '').trim();
+    if (/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(sym)) uniqueIsins.add(sym);
+  });
+  /* Step 2: build ISIN → ticker map (use cache + parallel Yahoo lookup) */
+  setSync('saving', `Tickers opzoeken 0/${uniqueIsins.size}...`);
+  const isinToSymbol = {};
+  const isinToName = {};
+  csvData.forEach(r => {
+    const isin = (r[idx.symbol] || '').trim();
+    const n = (r[idx.name] || '').trim();
+    if (isin && n && !isinToName[isin]) isinToName[isin] = n;
+  });
+  let done = 0;
+  for (const isin of uniqueIsins) {
+    isinToSymbol[isin] = await isinToTicker(isin, isinToName[isin]);
+    done++;
+    if (done % 3 === 0) setSync('saving', `Tickers opzoeken ${done}/${uniqueIsins.size}...`);
+  }
+  setSync('saving', `Importeren...`);
+
+  /* Step 3: process rows + dedup by transaction_id */
+  const existingTxIds = new Set(rawState.transactions.map(t => t.txId).filter(Boolean));
+  const existingDivIds = new Set(rawState.dividends.map(d => d.txId).filter(Boolean));
+  let added = 0, skipped = 0, dups = 0;
+
+  for (const r of csvData) {
+    const date = (r[idx.date] || '').slice(0, 10);
+    if (!date) { skipped++; continue; }
+    const cat = (r[idx.cat] || '').toUpperCase();
+    const type = (r[idx.type] || '').toUpperCase();
+    const txId = (r[idx.txId] || '').trim();
+    const amount = num(r[idx.amount]);
+    const fee = Math.abs(num(r[idx.fee]));
+    const tax = Math.abs(num(r[idx.tax]));
+    const currency = (r[idx.currency] || 'EUR').trim().toUpperCase();
+    const isin = (r[idx.symbol] || '').trim();
+    const name = (r[idx.name] || '').trim();
+    const fxRate = num(r[idx.fxRate]) || 1;
+    /* dedup */
+    if (txId && (existingTxIds.has(txId) || existingDivIds.has(txId))) { dups++; continue; }
+
+    /* Map to transaction kind */
+    let kind = null;
+    if (cat === 'TRADING' && type === 'BUY') kind = 'koop';
+    else if (cat === 'TRADING' && type === 'SELL') kind = 'verkoop';
+    else if (cat === 'CASH' && type === 'DIVIDEND') kind = 'dividend';
+    else if (cat === 'CASH' && (type === 'CUSTOMER_INPAYMENT' || type === 'CUSTOMER_INBOUND')) kind = 'storting';
+    else if (cat === 'CASH' && type === 'CUSTOMER_OUTBOUND_REQUEST') kind = 'opname';
+    else if (cat === 'CASH' && type === 'INTEREST_PAYMENT') kind = 'securities_lending';
+    else if (cat === 'CASH' && type === 'STOCKPERK') kind = 'storting'; /* refund van TR */
+    else if (cat === 'CASH' && type === 'CARD_TRANSACTION') kind = 'opname'; /* uitgave */
+    else if (cat === 'CASH' && type === 'DIVIDEND_CORRECTION') kind = 'dividend_correction';
+    else { skipped++; continue; }
+
+    /* Build transaction or dividend */
+    if (kind === 'dividend') {
+      const ticker = isin && isinToSymbol[isin] ? isinToSymbol[isin] : isin;
+      const gross = Math.abs(amount); /* TR shows positive dividend amount in EUR */
+      rawState.dividends.push({
+        id: uid(), portfolioId: pfId, ticker, date,
+        gross, tax,
+        currency: 'EUR', fx: 1, /* TR conversie al gedaan; amount staat in EUR */
+        note: 'TR import' + (isin ? ` (${isin})` : ''),
+        txId, createdAt: new Date().toISOString()
+      });
+      if (ticker) {
+        const t = ensureTicker(ticker);
+        if (!t.name && name) t.name = name;
+        /* If we have original currency from TR, save as ticker currency */
+        const oc = (r[idx.origCurrency] || '').trim().toUpperCase();
+        if (oc && !t.currency) t.currency = oc;
+      }
+      added++;
+    } else if (kind === 'koop' || kind === 'verkoop') {
+      const ticker = isin && isinToSymbol[isin] ? isinToSymbol[isin] : isin;
+      const qty = Math.abs(num(r[idx.shares]));
+      const price = num(r[idx.price]);
+      if (!ticker || qty === 0 || price === 0) { skipped++; continue; }
+      rawState.transactions.push({
+        id: uid(), portfolioId: pfId,
+        type: kind, date, ticker, qty, price,
+        fee, currency: 'EUR', fx: 1, /* TR rekent al om naar EUR */
+        note: name ? `TR: ${name}` : 'TR import',
+        txId, createdAt: new Date().toISOString()
+      });
+      const t = ensureTicker(ticker);
+      if (!t.name && name) t.name = name;
+      const assetClass = (r[idx.assetClass] || '').toUpperCase();
+      if (assetClass === 'FUND' && !t.type) t.type = 'etf';
+      else if (assetClass === 'STOCK' && !t.type) t.type = 'stock';
+      else if (assetClass === 'CRYPTO' && !t.type) t.type = 'crypto';
+      if (!t.broker) t.broker = 'Trade Republic';
+      added++;
+    } else {
+      /* Cash type: storting / opname / securities_lending */
+      rawState.transactions.push({
+        id: uid(), portfolioId: pfId,
+        type: kind, date,
+        ticker: '', qty: 0, price: 0,
+        amount: Math.abs(amount),
+        fee, currency: 'EUR', fx: 1,
+        note: (r[idx.description] || '').slice(0, 80) || 'TR import',
+        txId, createdAt: new Date().toISOString()
+      });
+      added++;
+    }
+  }
+
+  scheduleSave(); closeImportModal(); renderAll();
+  setSync('idle', 'Lokaal');
+  appToast(`${added} geïmporteerd, ${dups} duplicaten, ${skipped} overgeslagen`);
+  /* Background: refresh ticker stamdata (price, dps) for nieuwe tickers */
+  setTimeout(() => refreshAllTickers(), 800);
 }
 
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -4221,8 +4426,15 @@ function renderSettings() {
       <div class="card-header"><div class="card-title">Data wissen</div></div>
       <div class="settings-row">
         <div class="settings-label">
-          <div class="settings-label-title">Alle data verwijderen</div>
-          <div class="settings-label-desc">Verwijdert alle portefeuilles, transacties, dividenden en tickers</div>
+          <div class="settings-label-title">Wis ingelade data</div>
+          <div class="settings-label-desc">Verwijdert mutaties, dividenden, tickers en eigen events. Portefeuilles, strategieën en instellingen blijven staan — handig om opnieuw te beginnen met een schone CSV-import.</div>
+        </div>
+        <button class="btn btn-danger" onclick="wipeImportedData()">Wis data</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Alles verwijderen</div>
+          <div class="settings-label-desc">Verwijdert ook portefeuilles en strategieën. Zelfde als een fresh install.</div>
         </div>
         <button class="btn btn-danger" onclick="wipeAll()">Wis alles</button>
       </div>
@@ -4267,10 +4479,19 @@ function importJSON(file) {
   };
   reader.readAsText(file);
 }
+function wipeImportedData() {
+  if (!confirm('Mutaties + dividenden + tickers + eigen events wissen?\n\nPortefeuilles, strategieën en instellingen blijven.')) return;
+  rawState.transactions = [];
+  rawState.dividends = [];
+  rawState.tickers = [];
+  rawState.events = [];
+  scheduleSave(); renderAll();
+  appToast('Ingelade data gewist');
+}
 function wipeAll() {
   if (!confirm('ALLES wissen? Dit kan niet ongedaan worden gemaakt.')) return;
   if (!confirm('Echt zeker? Alle portefeuilles, transacties en dividenden worden verwijderd.')) return;
-  rawState = { portfolios: [], activePortfolioId: null, transactions: [], dividends: [], tickers: [], settings: rawState.settings };
+  rawState = { portfolios: [], activePortfolioId: null, transactions: [], dividends: [], tickers: [], events: [], strategies: DEFAULT_STRATEGIES.slice(), settings: rawState.settings };
   initState(); scheduleSave(); renderAll();
   appToast('Alles gewist');
 }
