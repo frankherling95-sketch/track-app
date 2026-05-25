@@ -1287,6 +1287,28 @@ function ensureTicker(symbol) {
 /* FX rate to EUR for a given currency. Eerst zoeken in transacties (transactioneel
    gebruikte koers), anders fallback naar gecachte Yahoo FX-rate. */
 const LS_FX_CACHE = 'herling_dividend_fx_cache_v1';
+const LS_FMP_KEY = 'herling_dividend_fmp_key';
+
+/* Financial Modeling Prep — gratis tier 250 calls/dag. Geeft sector/industry/
+   country/marketCap voor élke ticker wereldwijd. User configureert API key. */
+async function fetchFmpProfile(symbol, apiKey) {
+  if (!apiKey) return null;
+  const url = `https://financialmodelingprep.com/api/v3/profile/${encodeURIComponent(symbol)}?apikey=${encodeURIComponent(apiKey)}`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const arr = await r.json();
+    const p = Array.isArray(arr) ? arr[0] : null;
+    if (!p) return null;
+    return {
+      sector: p.sector || null,
+      industry: p.industry || null,
+      country: p.country || null,
+      marketCap: p.mktCap || null,
+      name: p.companyName || null,
+    };
+  } catch (e) { return null; }
+}
 function fxFromCache(currency) {
   if (!currency || currency === 'EUR') return 1;
   try {
@@ -2261,10 +2283,69 @@ async function fetchYahooFullData(symbol) {
   };
 }
 
-/* Known crypto symbols (zonder -EUR suffix). Wordt gebruikt om type='crypto'
-   forceren wanneer user import t als stock gemarkeerd had, en om de juiste
-   Yahoo-lookup te doen. */
-const KNOWN_CRYPTOS = new Set(['BTC','ETH','XRP','SOL','ADA','DOT','MATIC','DOGE','LINK','LTC','UNI','AVAX','ATOM','XLM','TRX','BNB','NEAR','APT','SHIB','PEPE','BCH','XMR','EOS','TON','ICP','ALGO']);
+/* ═══════════════════════════════════════════════════════════
+   CRYPTO MODULE — apart van Yahoo, gebruikt CoinGecko (gratis, CORS-friendly)
+   ═══════════════════════════════════════════════════════════ */
+
+const CRYPTO_TO_COINGECKO = {
+  BTC: 'bitcoin', ETH: 'ethereum', XRP: 'ripple', SOL: 'solana', ADA: 'cardano',
+  DOT: 'polkadot', MATIC: 'matic-network', DOGE: 'dogecoin', LINK: 'chainlink',
+  LTC: 'litecoin', UNI: 'uniswap', AVAX: 'avalanche-2', ATOM: 'cosmos',
+  XLM: 'stellar', TRX: 'tron', BNB: 'binancecoin', NEAR: 'near',
+  APT: 'aptos', SHIB: 'shiba-inu', PEPE: 'pepe', BCH: 'bitcoin-cash',
+  XMR: 'monero', EOS: 'eos', TON: 'the-open-network', ICP: 'internet-computer',
+  ALGO: 'algorand', FIL: 'filecoin', VET: 'vechain', HBAR: 'hedera-hashgraph',
+};
+const KNOWN_CRYPTOS = new Set(Object.keys(CRYPTO_TO_COINGECKO));
+
+function cryptoSymbolBase(symbol) {
+  return (symbol || '').toUpperCase().replace(/-(EUR|USD|GBP|USDT)$/i, '');
+}
+function isCrypto(symbolOrTicker) {
+  const t = typeof symbolOrTicker === 'string' ? null : symbolOrTicker;
+  const sym = t ? cryptoSymbolBase(t.symbol) : cryptoSymbolBase(symbolOrTicker);
+  return (t?.type === 'crypto') || KNOWN_CRYPTOS.has(sym);
+}
+
+async function fetchCoinGeckoData(symbol) {
+  const base = cryptoSymbolBase(symbol);
+  const cgId = CRYPTO_TO_COINGECKO[base];
+  if (!cgId) return null;
+  /* Simple price + market cap (snel, lichtgewicht) */
+  try {
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=eur&include_market_cap=true&include_24hr_change=true`;
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    const json = await r.json();
+    const d = json[cgId];
+    if (!d?.eur) return null;
+    return {
+      price: d.eur,
+      currency: 'EUR',
+      name: base === 'BTC' ? 'Bitcoin' : base === 'ETH' ? 'Ethereum' : cgId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      marketCap: d.eur_market_cap || null,
+      sector: 'Crypto',
+      industry: 'Cryptocurrency',
+      country: 'Globaal',
+    };
+  } catch (e) { return null; }
+}
+
+async function refreshCrypto(t) {
+  if (!t) return false;
+  const data = await fetchCoinGeckoData(t.symbol);
+  if (!data) return false;
+  t.type = 'crypto';
+  t.price = data.price;
+  t.currency = 'EUR';
+  if (data.name && !t.name) t.name = data.name;
+  if (data.marketCap) t.marketCap = data.marketCap;
+  if (!t.sector) t.sector = data.sector;
+  if (!t.industry) t.industry = data.industry;
+  if (!t.country) t.country = data.country;
+  t.lastFetchedAt = new Date().toISOString();
+  return true;
+}
 
 /* Statische metadata map voor populaire tickers + ETFs + jouw TR portfolio.
    Wordt gebruikt als Yahoo quoteSummary niets oplevert. Keyed op Yahoo-ticker. */
@@ -2292,6 +2373,24 @@ const STATIC_TICKER_META = {
   PLTR:  { sector:'Technology', industry:'Software', country:'US', type:'stock' },
   MRVL:  { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
   '0285.HK': { sector:'Technology', industry:'Electronic Equipment', country:'HK', type:'stock' },
+  CRM:   { sector:'Technology', industry:'Software', country:'US', type:'stock' },
+  NOW:   { sector:'Technology', industry:'Software', country:'US', type:'stock' },
+  ORCL:  { sector:'Technology', industry:'Software', country:'US', type:'stock' },
+  INTC:  { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  QCOM:  { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  TXN:   { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  IBM:   { sector:'Technology', industry:'IT Services', country:'US', type:'stock' },
+  CSCO:  { sector:'Technology', industry:'Communication Equipment', country:'US', type:'stock' },
+  DIS:   { sector:'Communication', industry:'Entertainment', country:'US', type:'stock' },
+  T:     { sector:'Communication', industry:'Telecom', country:'US', type:'stock' },
+  VZ:    { sector:'Communication', industry:'Telecom', country:'US', type:'stock' },
+  WMT:   { sector:'Consumer Staples', industry:'Discount Stores', country:'US', type:'stock' },
+  COST:  { sector:'Consumer Staples', industry:'Discount Stores', country:'US', type:'stock' },
+  MCD:   { sector:'Consumer Discretionary', industry:'Restaurants', country:'US', type:'stock' },
+  SBUX:  { sector:'Consumer Discretionary', industry:'Restaurants', country:'US', type:'stock' },
+  NKE:   { sector:'Consumer Discretionary', industry:'Apparel', country:'US', type:'stock' },
+  HD:    { sector:'Consumer Discretionary', industry:'Home Improvement', country:'US', type:'stock' },
+  LOW:   { sector:'Consumer Discretionary', industry:'Home Improvement', country:'US', type:'stock' },
   /* Dividend / banks / healthcare */
   JPM:   { sector:'Financials', industry:'Banks', country:'US', type:'stock' },
   BAC:   { sector:'Financials', industry:'Banks', country:'US', type:'stock' },
@@ -2304,16 +2403,19 @@ const STATIC_TICKER_META = {
   XOM:   { sector:'Energy', industry:'Oil & Gas', country:'US', type:'stock' },
   CVX:   { sector:'Energy', industry:'Oil & Gas', country:'US', type:'stock' },
   O:     { sector:'Real Estate', industry:'REIT - Retail', country:'US', type:'reit' },
-  /* ETFs (jouw portfolio) */
+  /* ETFs (jouw portfolio + populaire varianten) */
   'CSPX.L':   { sector:'ETF', industry:'S&P 500', country:'IE', type:'etf' },
   'CSPX.AS':  { sector:'ETF', industry:'S&P 500', country:'IE', type:'etf' },
+  'CSPX.MI':  { sector:'ETF', industry:'S&P 500', country:'IE', type:'etf' },
   'SXR8.DE':  { sector:'ETF', industry:'S&P 500', country:'IE', type:'etf' },
   'IWDA.L':   { sector:'ETF', industry:'Wereld (Developed)', country:'IE', type:'etf' },
   'IWDA.AS':  { sector:'ETF', industry:'Wereld (Developed)', country:'IE', type:'etf' },
+  'IWDA.MI':  { sector:'ETF', industry:'Wereld (Developed)', country:'IE', type:'etf' },
   'EUNL.DE':  { sector:'ETF', industry:'Wereld (Developed)', country:'IE', type:'etf' },
   'VWRL.AS':  { sector:'ETF', industry:'Wereld', country:'IE', type:'etf' },
   'VWCE.DE':  { sector:'ETF', industry:'Wereld', country:'IE', type:'etf' },
   'XAIX.DE':  { sector:'ETF', industry:'AI & Big Data', country:'IE', type:'etf' },
+  'XAIX.MI':  { sector:'ETF', industry:'AI & Big Data', country:'IE', type:'etf' },
   'SMH.AS':   { sector:'ETF', industry:'Semiconductors', country:'IE', type:'etf' },
   'WCBR.DE':  { sector:'ETF', industry:'Cybersecurity', country:'IE', type:'etf' },
   'WCBR.L':   { sector:'ETF', industry:'Cybersecurity', country:'IE', type:'etf' },
@@ -2321,6 +2423,10 @@ const STATIC_TICKER_META = {
   'IPRP.AS':  { sector:'ETF', industry:'Listed Private Equity', country:'IE', type:'etf' },
   'TDIV.AS':  { sector:'ETF', industry:'Dividend (Developed)', country:'NL', type:'etf' },
   'IEUR.AS':  { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
+  'IMAE.AS':  { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
+  'IMAE.L':   { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
+  'IMAE.MI':  { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
+  'IEUR.MI':  { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
   /* Cryptos */
   'BTC':     { sector:'Crypto', industry:'Cryptocurrency', country:'Globaal', type:'crypto' },
   'BTC-EUR': { sector:'Crypto', industry:'Cryptocurrency', country:'Globaal', type:'crypto' },
@@ -2363,25 +2469,35 @@ async function fetchYahooMetadata(symbol) {
   };
 }
 
-/* Refresh one ticker. Returns true on success. */
+/* Refresh one ticker. Routes crypto naar CoinGecko, stocks/ETFs naar Yahoo. */
 async function refreshTicker(symbolOrTicker) {
   const t = typeof symbolOrTicker === 'string' ? getTicker(symbolOrTicker) : symbolOrTicker;
   if (!t) return false;
-  /* Auto-detect crypto via symbol */
-  if (KNOWN_CRYPTOS.has((t.symbol || '').toUpperCase()) && t.type !== 'crypto') {
+  /* Auto-detect crypto via symbol of type */
+  if (isCrypto(t)) {
     t.type = 'crypto';
+    const ok = await refreshCrypto(t);
+    if (ok) applyStaticMeta(t); /* alleen voor extra fields */
+    return ok;
   }
-  /* Voor crypto verwacht Yahoo "<SYMBOL>-EUR" (bv BTC-EUR) want bare "BTC" geeft
-     Grayscale Bitcoin Mini Trust ETF terug */
-  let lookupSymbol = t.symbol;
-  if (t.type === 'crypto' && !/-(EUR|USD|GBP|USDT)$/i.test(t.symbol)) {
-    lookupSymbol = `${t.symbol}-EUR`;
-  }
-  const data = await fetchYahooFullData(lookupSymbol);
-  /* Probeer quoteSummary voor sector/industry/marketCap (alleen voor non-crypto) */
-  if (t.type !== 'crypto') {
+  /* Stocks/ETFs: Yahoo */
+  const data = await fetchYahooFullData(t.symbol);
+  /* Probeer FMP voor sector/industry als user een key heeft, anders Yahoo quoteSummary */
+  const fmpKey = localStorage.getItem(LS_FMP_KEY);
+  if (fmpKey) {
     try {
-      const meta = await fetchYahooMetadata(lookupSymbol);
+      const meta = await fetchFmpProfile(t.symbol, fmpKey);
+      if (meta) {
+        if (meta.sector && !t.sector) t.sector = meta.sector;
+        if (meta.industry && !t.industry) t.industry = meta.industry;
+        if (meta.country && !t.country) t.country = meta.country;
+        if (meta.marketCap && !t.marketCap) t.marketCap = meta.marketCap;
+        if (meta.name && !t.name) t.name = meta.name;
+      }
+    } catch (e) {}
+  } else {
+    try {
+      const meta = await fetchYahooMetadata(t.symbol);
       if (meta) {
         if (meta.sector && !t.sector) t.sector = meta.sector;
         if (meta.industry && !t.industry) t.industry = meta.industry;
@@ -4593,10 +4709,17 @@ function renderSettings() {
       <div class="card-header"><div class="card-title">Marktdata</div></div>
       <div class="settings-row">
         <div class="settings-label">
-          <div class="settings-label-title">Yahoo Finance ophalen</div>
-          <div class="settings-label-desc">Haalt koers, dividenden, frequentie en ex-div datums op via CORS-proxy. ${yahooLastFetchAgo() ? 'Laatst: ' + yahooLastFetchAgo() : 'Nog niet uitgevoerd'}</div>
+          <div class="settings-label-title">Koersen verversen (Yahoo + CoinGecko)</div>
+          <div class="settings-label-desc">Haalt koers/dividenden/ex-div via Yahoo voor stocks/ETFs, en CoinGecko (gratis, geen key) voor crypto. ${yahooLastFetchAgo() ? 'Laatst: ' + yahooLastFetchAgo() : 'Nog niet uitgevoerd'}</div>
         </div>
         <button class="btn btn-primary" onclick="refreshAllTickers()">Refresh nu</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">FMP API key (optioneel)</div>
+          <div class="settings-label-desc">Vul een gratis Financial Modeling Prep API-key in (250 calls/dag) voor automatische sector/branche/marketCap data voor élke ticker. Gratis aan te maken op <code>site.financialmodelingprep.com/developer</code></div>
+        </div>
+        <input class="input" type="password" id="fmpKeyInput" placeholder="abc123..." value="${escapeHtml(localStorage.getItem(LS_FMP_KEY) || '')}" style="width:220px;" onchange="saveFmpKey(this.value)">
       </div>
       <div class="settings-row">
         <div class="settings-label">
@@ -4708,6 +4831,11 @@ function setExcludeCash(on) {
   rawState.settings.excludeCashFlows = !!on;
   scheduleSave();
   renderAll();
+}
+function saveFmpKey(v) {
+  const k = (v || '').trim();
+  if (k) localStorage.setItem(LS_FMP_KEY, k); else localStorage.removeItem(LS_FMP_KEY);
+  appToast(k ? 'FMP-key opgeslagen — refresh tickers voor sector-data' : 'FMP-key verwijderd');
 }
 function applyTheme() {
   const t = rawState.settings?.theme || 'auto';
