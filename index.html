@@ -432,6 +432,8 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 .type-securities_lending { background:rgba(0,229,176,.10); color:var(--success); }
 .type-dividend_correction { background:rgba(245,194,91,.14); color:var(--gold); }
 .type-currency_conversion { background:rgba(155,123,255,.14); color:#9B7BFF; }
+.type-macro { background:rgba(15,27,61,.08); color:var(--text); }
+.macro-icon { width:28px; height:28px; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; background:var(--surface2); }
 .type-earnings { background:rgba(155,123,255,.14); color:#9B7BFF; }
 .type-cmd { background:rgba(91,184,245,.14); color:var(--sky); }
 .type-agm { background:rgba(216,91,184,.14); color:#D85BB8; }
@@ -3644,16 +3646,70 @@ function renderHoldings() {
    ═══════════════════════════════════════════════════════════ */
 
 const CAL_EVENT_TYPES = [
-  { key: 'exdiv',    label: 'Ex-dividend',      shortLabel: 'Ex-dividend',     cls: 'type-verkoop',  field: 'exDate' },
-  { key: 'pay',      label: 'Dividend',         shortLabel: 'Dividend',        cls: 'type-dividend', field: 'payDate' },
-  { key: 'earnings', label: 'Earnings',         shortLabel: 'Earnings',        cls: 'type-earnings', field: 'earnDate' },
-  { key: 'cmd',      label: 'Capital Markets Day', shortLabel: 'CMD',          cls: 'type-cmd',      field: 'cmdDate' },
-  { key: 'agm',      label: 'Aandeelhoudersvergadering', shortLabel: 'AGM',    cls: 'type-agm',      field: 'agmDate' },
+  { key: 'exdiv',    label: 'Ex-dividend',                 shortLabel: 'Ex-dividend', cls: 'type-verkoop',  field: 'exDate' },
+  { key: 'pay',      label: 'Dividend',                    shortLabel: 'Dividend',    cls: 'type-dividend', field: 'payDate' },
+  { key: 'earnings', label: 'Earnings',                    shortLabel: 'Earnings',    cls: 'type-earnings', field: 'earnDate' },
+  { key: 'cmd',      label: 'Capital Markets Day',         shortLabel: 'CMD',         cls: 'type-cmd',      field: 'cmdDate' },
+  { key: 'agm',      label: 'Aandeelhoudersvergadering',   shortLabel: 'AGM',         cls: 'type-agm',      field: 'agmDate' },
 ];
+
+const CAL_MACRO_TYPES = [
+  { key: 'us_cpi',  label: 'US Inflatie (CPI)',           shortLabel: 'US CPI',     cls: 'type-macro', icon: '🇺🇸', region: 'US' },
+  { key: 'us_nfp',  label: 'US Banengroei (NFP)',         shortLabel: 'US NFP',     cls: 'type-macro', icon: '🇺🇸', region: 'US' },
+  { key: 'us_fomc', label: 'Fed rentebesluit (FOMC)',     shortLabel: 'FOMC',       cls: 'type-macro', icon: '🇺🇸', region: 'US' },
+  { key: 'eu_cpi',  label: 'EU Inflatie (CPI flash)',     shortLabel: 'EU CPI',     cls: 'type-macro', icon: '🇪🇺', region: 'EU' },
+  { key: 'eu_ecb',  label: 'ECB rentebesluit',            shortLabel: 'ECB',        cls: 'type-macro', icon: '🇪🇺', region: 'EU' },
+];
+
+/* Hardcoded centrale-bank vergaderingen 2025-2027 (publiek bekend) */
+const MACRO_FIXED_DATES = {
+  us_fomc: ['2025-01-29','2025-03-19','2025-04-30','2025-06-18','2025-07-30','2025-09-17','2025-10-29','2025-12-10','2026-01-28','2026-03-18','2026-04-29','2026-06-17','2026-07-29','2026-09-16','2026-10-28','2026-12-09','2027-01-27','2027-03-17','2027-04-28','2027-06-16','2027-07-28','2027-09-15','2027-10-27','2027-12-08'],
+  eu_ecb:  ['2025-01-30','2025-03-06','2025-04-17','2025-06-05','2025-07-24','2025-09-11','2025-10-30','2025-12-18','2026-01-22','2026-03-05','2026-04-16','2026-06-04','2026-07-23','2026-09-10','2026-10-29','2026-12-17','2027-01-28','2027-03-11','2027-04-22','2027-06-10','2027-07-29','2027-09-09','2027-10-28','2027-12-16'],
+};
+
+/* Voor maandelijkse releases — N-th weekday van de maand. dayOfWeek: 0=Sun..6=Sat */
+function nthWeekdayOfMonth(year, month, weekday, n) {
+  const first = new Date(year, month, 1);
+  const offset = (weekday - first.getDay() + 7) % 7;
+  return new Date(year, month, 1 + offset + (n - 1) * 7);
+}
+
+function generateMacroEvents(startD, endD) {
+  const events = [];
+  /* Fixed dates */
+  CAL_MACRO_TYPES.filter(t => MACRO_FIXED_DATES[t.key]).forEach(t => {
+    MACRO_FIXED_DATES[t.key].forEach(dateStr => {
+      const d = new Date(dateStr);
+      if (d >= startD && d < endD) events.push({ type: t, date: dateStr, dt: d });
+    });
+  });
+  /* Recurring: walk through months in range */
+  const y0 = startD.getFullYear(), m0 = startD.getMonth();
+  const y1 = endD.getFullYear(), m1 = endD.getMonth();
+  for (let y = y0; y <= y1; y++) {
+    const mFrom = (y === y0) ? m0 : 0;
+    const mTo = (y === y1) ? m1 : 11;
+    for (let m = mFrom; m <= mTo; m++) {
+      /* US NFP — 1st Friday */
+      const nfp = nthWeekdayOfMonth(y, m, 5, 1);
+      if (nfp >= startD && nfp < endD) events.push({ type: CAL_MACRO_TYPES.find(t => t.key === 'us_nfp'), date: nfp.toISOString().slice(0, 10), dt: nfp });
+      /* US CPI — 2nd Wednesday (approximation; typically Tue/Wed mid-month) */
+      const cpi = nthWeekdayOfMonth(y, m, 3, 2);
+      if (cpi >= startD && cpi < endD) events.push({ type: CAL_MACRO_TYPES.find(t => t.key === 'us_cpi'), date: cpi.toISOString().slice(0, 10), dt: cpi });
+      /* EU CPI flash — last weekday of month (use last Friday as approximation) */
+      const lastD = new Date(y, m + 1, 0);
+      const eucpi = new Date(lastD);
+      while (eucpi.getDay() !== 5) eucpi.setDate(eucpi.getDate() - 1);
+      if (eucpi >= startD && eucpi < endD) events.push({ type: CAL_MACRO_TYPES.find(t => t.key === 'eu_cpi'), date: eucpi.toISOString().slice(0, 10), dt: eucpi });
+    }
+  }
+  return events;
+}
 
 let _calView = 'month'; /* 'week' or 'month' */
 let _calRef = new Date(); _calRef.setHours(0, 0, 0, 0);
-let _calEventsEnabled = new Set(CAL_EVENT_TYPES.map(t => t.key));
+let _calEventsEnabled = new Set(CAL_EVENT_TYPES.map(t => t.key)); /* ticker events default on */
+let _calMacroEnabled = new Set(); /* macro events default off */
 
 function calShift(delta) {
   if (_calView === 'week') _calRef.setDate(_calRef.getDate() + delta * 7);
@@ -3668,20 +3724,31 @@ function toggleCalEvent(key) {
 }
 function openCalFilterSheet() {
   document.getElementById('calFilterSheet').classList.add('open');
-  document.getElementById('calFilterBody').innerHTML = CAL_EVENT_TYPES.map(t => `
-    <div class="col-pick-item ${_calEventsEnabled.has(t.key) ? 'checked' : ''}" data-evt="${t.key}" onclick="this.classList.toggle('checked')">
+  const tickerEvts = CAL_EVENT_TYPES.map(t => `
+    <div class="col-pick-item ${_calEventsEnabled.has(t.key) ? 'checked' : ''}" data-evt="${t.key}" data-kind="ticker" onclick="this.classList.toggle('checked')">
       <span class="col-pick-cb"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 8l3 3 7-7"/></svg></span>
       <span class="col-pick-label">${escapeHtml(t.label)}</span>
     </div>
   `).join('');
+  const macroHead = `<div style="padding:10px 8px 4px; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:.4px;">Macro events</div>`;
+  const macroEvts = CAL_MACRO_TYPES.map(t => `
+    <div class="col-pick-item ${_calMacroEnabled.has(t.key) ? 'checked' : ''}" data-evt="${t.key}" data-kind="macro" onclick="this.classList.toggle('checked')">
+      <span class="col-pick-cb"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 8l3 3 7-7"/></svg></span>
+      <span class="col-pick-label">${t.icon} ${escapeHtml(t.label)}</span>
+    </div>
+  `).join('');
+  document.getElementById('calFilterBody').innerHTML = tickerEvts + macroHead + macroEvts;
 }
 function closeCalFilterSheet() { document.getElementById('calFilterSheet').classList.remove('open'); }
 function resetCalFilterSheet() {
-  document.querySelectorAll('#calFilterBody .col-pick-item').forEach(el => el.classList.add('checked'));
+  document.querySelectorAll('#calFilterBody .col-pick-item').forEach(el => {
+    el.classList.toggle('checked', el.dataset.kind === 'ticker'); /* default: ticker on, macro off */
+  });
 }
 function saveCalFilterSheet() {
-  _calEventsEnabled = new Set([...document.querySelectorAll('#calFilterBody .col-pick-item.checked')].map(el => el.dataset.evt));
-  if (!_calEventsEnabled.size) { appToast('Selecteer minstens 1 event-type', { type: 'warn' }); return; }
+  const checked = [...document.querySelectorAll('#calFilterBody .col-pick-item.checked')];
+  _calEventsEnabled = new Set(checked.filter(el => el.dataset.kind === 'ticker').map(el => el.dataset.evt));
+  _calMacroEnabled  = new Set(checked.filter(el => el.dataset.kind === 'macro').map(el => el.dataset.evt));
   closeCalFilterSheet();
   renderCalendar();
 }
@@ -3728,6 +3795,12 @@ function renderCalendar() {
       events.push({ date, dt: d, type: et, ticker: t, amount });
     });
   });
+  /* Macro events */
+  if (_calMacroEnabled.size) {
+    generateMacroEvents(rangeStart, rangeEnd)
+      .filter(e => _calMacroEnabled.has(e.type.key))
+      .forEach(e => events.push({ date: e.date, dt: e.dt, type: e.type, ticker: null, amount: 0, macro: true }));
+  }
   events.sort((a, b) => a.date.localeCompare(b.date));
   /* Group by week */
   const weeks = new Map();
@@ -3783,8 +3856,8 @@ function renderCalendar() {
                 <div class="cal-day-label-num">${e.dt.getDate()}</div>
                 <div>${e.dt.toLocaleDateString('nl-NL', { weekday: 'short' })}</div>
               </div>
-              ${brandLogoHTML(e.ticker)}
-              <div class="cal-day-name">${escapeHtml(e.ticker.name || e.ticker.symbol)}<div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">${escapeHtml(e.ticker.symbol)}</div></div>
+              ${e.macro ? `<div class="macro-icon">${e.type.icon}</div>` : brandLogoHTML(e.ticker)}
+              <div class="cal-day-name">${e.macro ? escapeHtml(e.type.label) : escapeHtml(e.ticker.name || e.ticker.symbol) + `<div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">${escapeHtml(e.ticker.symbol)}</div>`}</div>
               <div class="cal-day-ev-type" style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
                 <span class="type-pill ${e.type.cls}">${e.type.shortLabel}</span>
                 ${e.amount > 0 ? `<span class="text-mono" style="font-size:11px; color:var(--success);">≈ ${fmtNum(e.amount, 2)} ${escapeHtml(e.ticker.currency || '')}</span>` : ''}
