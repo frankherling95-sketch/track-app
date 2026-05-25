@@ -442,15 +442,15 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
       <span class="tn-brand-text">Track</span>
     </a>
     <nav class="tn-items" id="tnItems">
-      <a class="tn-item" data-route="portfolio" onclick="navigate('portfolio')">Portfolio</a>
-      <a class="tn-item" data-route="performance" onclick="navigate('performance')">Performance</a>
+      <a class="tn-item" data-route="portfolio" onclick="navigate('portfolio')">Portefeuille</a>
+      <a class="tn-item" data-route="performance" onclick="navigate('performance')">Rendement</a>
       <a class="tn-item" data-route="dividend" onclick="navigate('dividend')">Dividend</a>
-      <a class="tn-item" data-route="calendar" onclick="navigate('calendar')">Calendar</a>
-      <a class="tn-item" data-route="actions" onclick="navigate('actions')">Actions</a>
+      <a class="tn-item" data-route="calendar" onclick="navigate('calendar')">Agenda</a>
+      <a class="tn-item" data-route="actions" onclick="navigate('actions')">Mutaties</a>
     </nav>
     <div class="tn-right">
       <select class="tn-pf-select" id="pfSelect" onchange="switchPortfolio(this.value)" title="Portefeuille"></select>
-      <button class="value-pill" id="valuePill" onclick="navigate('portfolio')" title="Net worth + YTD">
+      <button class="value-pill" id="valuePill" onclick="navigate('portfolio')" title="Vermogen + YTD">
         <span class="value-pill-val" id="valuePillVal">€ —</span>
         <span class="value-pill-ytd" id="valuePillYtd">YTD —</span>
       </button>
@@ -468,7 +468,7 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   <main class="page-wrap">
     <header class="page-head">
       <div style="flex:1; min-width:0;">
-        <div class="page-title" id="pageTitle">Portfolio</div>
+        <div class="page-title" id="pageTitle">Portefeuille</div>
         <div class="page-sub" id="pageSub"></div>
       </div>
       <div class="page-actions" id="pageActions"></div>
@@ -480,11 +480,11 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   <nav class="bottom-tab" id="bottomTab">
     <a class="bt-item" data-route="portfolio" onclick="navigate('portfolio')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.36 6.36"/></svg>
-      <span class="bt-label">Portfolio</span>
+      <span class="bt-label">Portefeuille</span>
     </a>
     <a class="bt-item" data-route="performance" onclick="navigate('performance')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 5 4 4-8 5 10"/></svg>
-      <span class="bt-label">Performance</span>
+      <span class="bt-label">Rendement</span>
     </a>
     <a class="bt-item" data-route="dividend" onclick="navigate('dividend')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 20V10M12 20V4M18 20v-8"/></svg>
@@ -492,11 +492,11 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
     </a>
     <a class="bt-item" data-route="calendar" onclick="navigate('calendar')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
-      <span class="bt-label">Calendar</span>
+      <span class="bt-label">Agenda</span>
     </a>
     <a class="bt-item" data-route="actions" onclick="navigate('actions')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h13M8 7l4-4M8 7l4 4M16 17H3M16 17l-4-4M16 17l-4 4"/></svg>
-      <span class="bt-label">Actions</span>
+      <span class="bt-label">Mutaties</span>
     </a>
   </nav>
 </div>
@@ -525,7 +525,7 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
       </a>
       <a class="sm-item" onclick="closeSettingsMenu();refreshAllTickers()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>
-        Refresh koersen (Yahoo)
+        Koersen verversen (Yahoo)
       </a>
       <div style="height:1px; background:var(--border); margin:6px 0;"></div>
       <a class="sm-item" onclick="closeSettingsMenu();navigate('settings')">
@@ -767,12 +767,12 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-head">
-      <div class="sheet-title">Columns</div>
-      <button class="sheet-reset" onclick="resetColPicker()">Reset</button>
+      <div class="sheet-title">Kolommen</div>
+      <button class="sheet-reset" onclick="resetColPicker()">Standaard</button>
     </div>
     <div class="sheet-body" id="colPickBody"></div>
     <div class="sheet-foot">
-      <button class="sheet-save" onclick="saveColPicker()">Save</button>
+      <button class="sheet-save" onclick="saveColPicker()">Opslaan</button>
     </div>
   </div>
 </div>
@@ -1255,10 +1255,10 @@ function brandLogoHTML(ticker) {
 
 const PORT_BREAKDOWNS = [
   { key: 'sector',   label: 'Sector',   getter: tk => tk?.sector || 'Onbekend' },
-  { key: 'industry', label: 'Industry', getter: tk => tk?.industry || 'Onbekend' },
+  { key: 'industry', label: 'Branche',  getter: tk => tk?.industry || 'Onbekend' },
   { key: 'type',     label: 'Type',     getter: tk => { const m = { stock:'Aandeel', etf:'ETF', bond:'Obligatie', fund:'Fonds', crypto:'Crypto', metal:'Edelmetaal', reit:'REIT', other:'Overig' }; return m[tk?.type || 'stock'] || 'Aandeel'; } },
-  { key: 'country',  label: 'Country',  getter: tk => tk?.country || 'Onbekend' },
-  { key: 'currency', label: 'Currency', getter: tk => tk?.currency || 'EUR' },
+  { key: 'country',  label: 'Land',     getter: tk => tk?.country || 'Onbekend' },
+  { key: 'currency', label: 'Valuta',   getter: tk => tk?.currency || 'EUR' },
 ];
 
 let _portBreakdown = 'sector';
@@ -1285,20 +1285,20 @@ function holdingPeriodForTicker(symbol) {
 }
 
 const SEC_COLUMNS = [
-  { key: 'worth',        label: 'Portfolio worth',      def: true,  num: true, get: (h, tk) => valueOfHolding(h, tk),                                          fmt: v => fmtEUR(v) },
-  { key: 'unrealPL',     label: 'Unrealised P/L',       def: true,  num: true, get: (h, tk) => unrealPLOfHolding(h, tk),                                       fmt: v => (v >= 0 ? '+' : '') + fmtEUR(v), color: true },
-  { key: 'unrealPLPct',  label: 'Unrealised P/L (%)',   def: true,  num: true, get: (h, tk) => h.costEur > 0 ? (unrealPLOfHolding(h, tk) / h.costEur) * 100 : 0, fmt: v => (v >= 0 ? '+' : '') + fmtPct(v, 2), color: true },
-  { key: 'shares',       label: 'Number of shares',     def: false, num: true, get: h => h.qty,                                                                fmt: v => fmtNum(v, 4) },
-  { key: 'invested',     label: 'Total invested',       def: false, num: true, get: h => h.costEur,                                                            fmt: v => fmtEUR(v) },
-  { key: 'avgPrice',     label: 'Average cost',         def: false, num: true, get: h => h.qty > 0 ? h.costEur / h.qty : 0,                                    fmt: v => fmtEUR(v) },
-  { key: 'currentPrice', label: 'Current price',        def: false, num: true, get: (h, tk) => tk?.price ?? null,                                              fmt: (v, h, tk) => v != null ? fmtNum(v, 2) + ' ' + (tk?.currency || '') : '—' },
-  { key: 'dividends',    label: 'Dividends (received)', def: false, num: true, get: h => totalDividendForTicker(h.ticker),                                     fmt: v => v > 0 ? fmtEUR(v) : '—' },
-  { key: 'realPL',       label: 'Realised P/L',         def: false, num: true, get: h => h.realizedEur || 0,                                                   fmt: v => v ? (v >= 0 ? '+' : '') + fmtEUR(v) : '—', color: true },
-  { key: 'totalPL',      label: 'Total P/L',            def: false, num: true, get: (h, tk) => unrealPLOfHolding(h, tk) + (h.realizedEur || 0),                fmt: v => (v >= 0 ? '+' : '') + fmtEUR(v), color: true },
-  { key: 'totalPLPct',   label: 'Total P/L (%)',        def: false, num: true, get: (h, tk) => h.costEur > 0 ? ((unrealPLOfHolding(h, tk) + (h.realizedEur || 0)) / h.costEur) * 100 : 0, fmt: v => (v >= 0 ? '+' : '') + fmtPct(v, 2), color: true },
-  { key: 'yoc',          label: 'Yield on cost',        def: false, num: true, get: h => h.costEur > 0 ? (totalDividendForTicker(h.ticker) / h.costEur) * 100 : 0, fmt: v => v > 0 ? fmtPct(v, 2) : '—' },
-  { key: 'fwdDiv',       label: 'Forward dividend',     def: false, num: true, get: (h, tk) => { const fx = tk ? fxForCurrency(tk.currency) : 1; return (tk?.dps || 0) * h.qty * fx; }, fmt: v => v > 0 ? fmtEUR(v) : '—' },
-  { key: 'holdingPeriod',label: 'Holding period',       def: false, num: false, get: h => holdingPeriodForTicker(h.ticker),                                    fmt: v => v },
+  { key: 'worth',        label: 'Waarde',                   def: true,  num: true, get: (h, tk) => valueOfHolding(h, tk),                                          fmt: v => fmtEUR(v) },
+  { key: 'unrealPL',     label: 'Ongerealiseerd resultaat', def: true,  num: true, get: (h, tk) => unrealPLOfHolding(h, tk),                                       fmt: v => (v >= 0 ? '+' : '') + fmtEUR(v), color: true },
+  { key: 'unrealPLPct',  label: 'Ongerealiseerd %',         def: true,  num: true, get: (h, tk) => h.costEur > 0 ? (unrealPLOfHolding(h, tk) / h.costEur) * 100 : 0, fmt: v => (v >= 0 ? '+' : '') + fmtPct(v, 2), color: true },
+  { key: 'shares',       label: 'Aantal aandelen',          def: false, num: true, get: h => h.qty,                                                                fmt: v => fmtNum(v, 4) },
+  { key: 'invested',     label: 'Geïnvesteerd',             def: false, num: true, get: h => h.costEur,                                                            fmt: v => fmtEUR(v) },
+  { key: 'avgPrice',     label: 'Gem. kostprijs',           def: false, num: true, get: h => h.qty > 0 ? h.costEur / h.qty : 0,                                    fmt: v => fmtEUR(v) },
+  { key: 'currentPrice', label: 'Huidige koers',            def: false, num: true, get: (h, tk) => tk?.price ?? null,                                              fmt: (v, h, tk) => v != null ? fmtNum(v, 2) + ' ' + (tk?.currency || '') : '—' },
+  { key: 'dividends',    label: 'Dividend ontvangen',       def: false, num: true, get: h => totalDividendForTicker(h.ticker),                                     fmt: v => v > 0 ? fmtEUR(v) : '—' },
+  { key: 'realPL',       label: 'Gerealiseerd resultaat',   def: false, num: true, get: h => h.realizedEur || 0,                                                   fmt: v => v ? (v >= 0 ? '+' : '') + fmtEUR(v) : '—', color: true },
+  { key: 'totalPL',      label: 'Totaal resultaat',         def: false, num: true, get: (h, tk) => unrealPLOfHolding(h, tk) + (h.realizedEur || 0),                fmt: v => (v >= 0 ? '+' : '') + fmtEUR(v), color: true },
+  { key: 'totalPLPct',   label: 'Totaal %',                 def: false, num: true, get: (h, tk) => h.costEur > 0 ? ((unrealPLOfHolding(h, tk) + (h.realizedEur || 0)) / h.costEur) * 100 : 0, fmt: v => (v >= 0 ? '+' : '') + fmtPct(v, 2), color: true },
+  { key: 'yoc',          label: 'Yield on cost',            def: false, num: true, get: h => h.costEur > 0 ? (totalDividendForTicker(h.ticker) / h.costEur) * 100 : 0, fmt: v => v > 0 ? fmtPct(v, 2) : '—' },
+  { key: 'fwdDiv',       label: 'Verwacht dividend',        def: false, num: true, get: (h, tk) => { const fx = tk ? fxForCurrency(tk.currency) : 1; return (tk?.dps || 0) * h.qty * fx; }, fmt: v => v > 0 ? fmtEUR(v) : '—' },
+  { key: 'holdingPeriod',label: 'Bezitsduur',               def: false, num: false, get: h => holdingPeriodForTicker(h.ticker),                                    fmt: v => v },
 ];
 
 function getPortColumns() {
@@ -1340,10 +1340,10 @@ function renderPortfolio() {
     </div>
     <div class="port-section">
       <div class="sec-tbl-head">
-        <div class="sec-tbl-head-title">Securities <span class="text-muted" style="font-weight:500;font-size:13px;font-family:var(--font-mono);">${computeHoldings().length}</span></div>
+        <div class="sec-tbl-head-title">Effecten <span class="text-muted" style="font-weight:500;font-size:13px;font-family:var(--font-mono);">${computeHoldings().length}</span></div>
         <button class="sec-tbl-cols-btn" onclick="openColPicker()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-          Columns
+          Kolommen
         </button>
       </div>
       <div class="tbl-wrap" id="secTblWrap"></div>
@@ -1435,7 +1435,7 @@ function renderSecTable() {
     return _portSort.dir === 'desc' ? (vb - va) : (va - vb);
   });
   const dirInd = key => _portSort.key === key ? (_portSort.dir === 'desc' ? ' ▼' : ' ▲') : '';
-  const head = `<th class="sortable ${_portSort.key === 'name' ? 'sort-' + _portSort.dir : ''}" onclick="sortBy('name')">Security<span class="sort-ind">${dirInd('name') || ''}</span></th>` +
+  const head = `<th class="sortable ${_portSort.key === 'name' ? 'sort-' + _portSort.dir : ''}" onclick="sortBy('name')">Effect<span class="sort-ind">${dirInd('name') || ''}</span></th>` +
     cols.map(c => `<th class="num sortable ${_portSort.key === c.key ? 'sort-' + _portSort.dir : ''}" onclick="sortBy('${c.key}')">${c.label}<span class="sort-ind">${dirInd(c.key) || ''}</span></th>`).join('');
   const body = sorted.map(h => {
     const tk = getTicker(h.ticker);
@@ -1658,14 +1658,14 @@ function portfolioStats() {
 
 /* Primary routes (top nav + bottom tab). Aliases voor oude hash-namen. */
 const ROUTES = {
-  portfolio:   { title: 'Portfolio',   render: renderPortfolio,    actions: () => '' },
-  performance: { title: 'Performance', render: renderProjection,   actions: () => '' },
-  dividend:    { title: 'Dividend',    render: renderDividends,    actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Toevoegen</button>` },
-  calendar:    { title: 'Calendar',    render: renderCalendar,     actions: () => '' },
-  actions:     { title: 'Actions',     render: renderTransactions, actions: () => `<button class="btn btn-primary" onclick="openTxModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe actie</button>` },
+  portfolio:   { title: 'Portefeuille', render: renderPortfolio,    actions: () => '' },
+  performance: { title: 'Rendement',    render: renderProjection,   actions: () => '' },
+  dividend:    { title: 'Dividend',     render: renderDividends,    actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Toevoegen</button>` },
+  calendar:    { title: 'Agenda',       render: renderCalendar,     actions: () => '' },
+  actions:     { title: 'Mutaties',     render: renderTransactions, actions: () => `<button class="btn btn-primary" onclick="openTxModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe mutatie</button>` },
   /* Secondary routes (accessible via gear menu) */
   holdings:    { title: 'Posities',    render: renderHoldings,     actions: () => '' },
-  tickers:     { title: 'Tickers',     render: renderTickers,      actions: () => `<button class="btn" onclick="refreshAllTickers()" title="Yahoo Finance ophalen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>Refresh</button> <button class="btn btn-primary" onclick="openTickerModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe ticker</button>` },
+  tickers:     { title: 'Tickers',     render: renderTickers,      actions: () => `<button class="btn" onclick="refreshAllTickers()" title="Yahoo Finance ophalen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>Verversen</button> <button class="btn btn-primary" onclick="openTickerModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe ticker</button>` },
   projection:  { title: 'Projectie',   render: renderProjection,   actions: () => '' },
   settings:    { title: 'Instellingen', render: renderSettings,    actions: () => '' }
 };
@@ -2253,20 +2253,20 @@ function renderDashboard() {
   const netWorth = s.currentValue + cash;
   c.innerHTML = `
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-label">Net worth</div><div class="kpi-value">${fmtEUR(netWorth)}</div><div class="kpi-sub">${fmtEUR(s.currentValue)} effecten + ${fmtEUR(cash)} cash</div></div>
+      <div class="kpi"><div class="kpi-label">Vermogen</div><div class="kpi-value">${fmtEUR(netWorth)}</div><div class="kpi-sub">${fmtEUR(s.currentValue)} effecten + ${fmtEUR(cash)} cash</div></div>
       <div class="kpi"><div class="kpi-label">Geïnvesteerd</div><div class="kpi-value">${fmtEUR(s.invested)}</div><div class="kpi-sub">${s.holdings.length} ${s.holdings.length === 1 ? 'positie' : 'posities'}</div></div>
-      <div class="kpi"><div class="kpi-label">Onrealised P&L</div><div class="kpi-value ${gainPct >= 0 ? 'pos' : 'neg'}" style="color:${gainPct >= 0 ? 'var(--success)' : 'var(--danger)'};">${gainPct >= 0 ? '+' : ''}${fmtEUR(s.currentValue - s.invested)}</div><div class="kpi-sub ${gainPct >= 0 ? 'pos' : 'neg'}">${gainPct >= 0 ? '+' : ''}${fmtPct(gainPct)}</div></div>
-      <div class="kpi"><div class="kpi-label">Realized P&L</div><div class="kpi-value ${realized >= 0 ? 'pos' : 'neg'}" style="color:${realized >= 0 ? 'var(--success)' : 'var(--danger)'};">${realized >= 0 ? '+' : ''}${fmtEUR(realized)}</div><div class="kpi-sub">uit verkopen</div></div>
-      <div class="kpi"><div class="kpi-label">MWRR</div><div class="kpi-value">${mwrr != null ? (mwrr >= 0 ? '+' : '') + fmtPct(mwrr, 2) : '—'}</div><div class="kpi-sub">money-weighted return</div></div>
-      <div class="kpi"><div class="kpi-label">CAGR</div><div class="kpi-value">${cagr != null ? (cagr >= 0 ? '+' : '') + fmtPct(cagr, 2) : '—'}</div><div class="kpi-sub">annualized growth</div></div>
-      <div class="kpi"><div class="kpi-label">Forward dividend</div><div class="kpi-value kpi-accent">${fmtEUR(s.forwardDiv)}</div><div class="kpi-sub">${fmtEUR(s.forwardDiv / 12)} / mnd</div></div>
+      <div class="kpi"><div class="kpi-label">Ongerealiseerd resultaat</div><div class="kpi-value ${gainPct >= 0 ? 'pos' : 'neg'}" style="color:${gainPct >= 0 ? 'var(--success)' : 'var(--danger)'};">${gainPct >= 0 ? '+' : ''}${fmtEUR(s.currentValue - s.invested)}</div><div class="kpi-sub ${gainPct >= 0 ? 'pos' : 'neg'}">${gainPct >= 0 ? '+' : ''}${fmtPct(gainPct)}</div></div>
+      <div class="kpi"><div class="kpi-label">Gerealiseerd resultaat</div><div class="kpi-value ${realized >= 0 ? 'pos' : 'neg'}" style="color:${realized >= 0 ? 'var(--success)' : 'var(--danger)'};">${realized >= 0 ? '+' : ''}${fmtEUR(realized)}</div><div class="kpi-sub">uit verkopen</div></div>
+      <div class="kpi"><div class="kpi-label">MWRR</div><div class="kpi-value">${mwrr != null ? (mwrr >= 0 ? '+' : '') + fmtPct(mwrr, 2) : '—'}</div><div class="kpi-sub">geldgewogen rendement</div></div>
+      <div class="kpi"><div class="kpi-label">CAGR</div><div class="kpi-value">${cagr != null ? (cagr >= 0 ? '+' : '') + fmtPct(cagr, 2) : '—'}</div><div class="kpi-sub">jaarlijkse groei</div></div>
+      <div class="kpi"><div class="kpi-label">Verwacht dividend</div><div class="kpi-value kpi-accent">${fmtEUR(s.forwardDiv)}</div><div class="kpi-sub">${fmtEUR(s.forwardDiv / 12)} / mnd</div></div>
       <div class="kpi"><div class="kpi-label">Yield on cost</div><div class="kpi-value">${fmtPct(s.yoc)}</div><div class="kpi-sub">Yield nu: ${fmtPct(s.yieldNow)}</div></div>
       <div class="kpi"><div class="kpi-label">Totaal ontvangen</div><div class="kpi-value">${fmtEUR(s.received)}</div><div class="kpi-sub">${dv.length} betalingen</div></div>
     </div>
 
     <div class="chart-grid">
       <div class="card full">
-        <div class="card-header"><div class="card-title">Net worth over tijd</div>
+        <div class="card-header"><div class="card-title">Vermogen over tijd</div>
           <div class="text-muted text-mono" style="font-size:12px;">cost basis vs marktwaarde + cash</div>
         </div>
         <div class="chart-wrap" id="nwChart"></div>
@@ -2331,7 +2331,7 @@ function renderNwChart() {
     svg += `<text x="${pts[i].x}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">${fmtMonth(series[i].date)}</text>`;
   });
   svg += '</svg>';
-  wrap.innerHTML = svg + `<div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--mint)"></span>Net worth (marktwaarde + cash)</div><div class="legend-item"><span class="legend-dot" style="background:var(--text-muted)"></span>Cost basis (geïnvesteerd)</div></div>`;
+  wrap.innerHTML = svg + `<div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--mint)"></span>Vermogen (marktwaarde + cash)</div><div class="legend-item"><span class="legend-dot" style="background:var(--text-muted)"></span>Kostprijs (geïnvesteerd)</div></div>`;
 }
 
 let _divChartScale = 'month';
