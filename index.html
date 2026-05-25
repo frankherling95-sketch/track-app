@@ -1621,14 +1621,9 @@ function brandLogoHTML(ticker) {
 const PORT_BREAKDOWNS = [
   { key: 'sector',    label: 'Sector',     getter: tk => tk?.sector || 'Onbekend' },
   { key: 'industry',  label: 'Branche',    getter: tk => tk?.industry || 'Onbekend' },
-  { key: 'marketcap', label: 'Market cap', getter: tk => marketCapBucket(tk?.marketCap) },
-  { key: 'continent', label: 'Continent',  getter: tk => countryToContinent(tk?.country) },
-  { key: 'country',   label: 'Land',       getter: tk => tk?.country || 'Onbekend' },
-  { key: 'currency',  label: 'Valuta',     getter: tk => tk?.currency || 'EUR' },
-  { key: 'exchange',  label: 'Exchange',   getter: tk => tk?.exchange || 'Onbekend' },
   { key: 'type',      label: 'Type',       getter: tk => { const m = { stock:'Aandeel', etf:'ETF', bond:'Obligatie', fund:'Fonds', crypto:'Crypto', metal:'Edelmetaal', reit:'REIT', other:'Overig' }; return m[tk?.type || 'stock'] || 'Aandeel'; } },
-  { key: 'strategy',  label: 'Strategie',  getter: tk => { const s = rawState.strategies?.find(s => s.id === tk?.strategyId); return s ? s.name : 'Geen strategie'; } },
-  { key: 'broker',    label: 'Broker',     getter: tk => tk?.broker || 'Onbekend' },
+  { key: 'country',   label: 'Land',       getter: tk => tk?.country || 'Onbekend' },
+  { key: 'marketcap', label: 'Market cap', getter: tk => marketCapBucket(tk?.marketCap) },
 ];
 
 let _portBreakdown = 'sector';
@@ -2249,7 +2244,13 @@ async function fetchYahooFullData(symbol) {
 async function refreshTicker(symbolOrTicker) {
   const t = typeof symbolOrTicker === 'string' ? getTicker(symbolOrTicker) : symbolOrTicker;
   if (!t) return false;
-  const data = await fetchYahooFullData(t.symbol);
+  /* Voor crypto verwacht Yahoo "<SYMBOL>-EUR" (bv BTC-EUR), niet bare "BTC"
+     want bare "BTC" geeft BlackRock Capital Investment stock (~$5-30) terug */
+  let lookupSymbol = t.symbol;
+  if (t.type === 'crypto' && !/-(EUR|USD|GBP|USDT)$/i.test(t.symbol)) {
+    lookupSymbol = `${t.symbol}-EUR`;
+  }
+  const data = await fetchYahooFullData(lookupSymbol);
   if (!data) return false;
   /* Price + currency must stay paired — always refresh together when Yahoo returns price */
   if (data.price != null) {
@@ -3374,7 +3375,7 @@ async function commitTradeRepublicImport() {
     else if (cat === 'CASH' && (type === 'CUSTOMER_INPAYMENT' || type === 'CUSTOMER_INBOUND')) kind = 'storting';
     else if (cat === 'CASH' && type === 'CUSTOMER_OUTBOUND_REQUEST') kind = 'opname';
     else if (cat === 'CASH' && type === 'INTEREST_PAYMENT') kind = 'securities_lending';
-    else if (cat === 'CASH' && type === 'STOCKPERK') kind = 'storting'; /* refund van TR */
+    else if (cat === 'CASH' && type === 'STOCKPERK') kind = 'securities_lending'; /* TR bonus = income, niet inleg */
     else if (cat === 'CASH' && type === 'CARD_TRANSACTION') kind = 'opname'; /* uitgave */
     else if (cat === 'CASH' && type === 'DIVIDEND_CORRECTION') kind = 'dividend_correction';
     else { skipped++; continue; }
