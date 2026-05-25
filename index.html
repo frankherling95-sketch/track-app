@@ -144,6 +144,89 @@ button { font-family:inherit; }
 .tn-status.error .tn-status-dot { background:var(--rose); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
+/* ─────────── Portfolio module (Fase 2) ─────────── */
+.port-section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow-sm); margin-bottom:14px; }
+
+.port-tabs { display:flex; gap:4px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px; border-bottom:1px solid var(--border); -webkit-overflow-scrolling:touch; }
+.port-tab {
+  background:transparent; border:none; padding:8px 12px; cursor:pointer;
+  font-family:inherit; font-size:13px; font-weight:600; color:var(--text-muted);
+  white-space:nowrap; border-bottom:2px solid transparent; margin-bottom:-7px;
+  transition:color .15s, border-color .15s;
+}
+.port-tab:hover { color:var(--text); }
+.port-tab.active { color:var(--text); border-bottom-color:var(--mint); }
+
+.port-donut-row { display:grid; grid-template-columns:auto 1fr; gap:24px; align-items:center; }
+@media (max-width:600px) { .port-donut-row { grid-template-columns:1fr; gap:16px; } }
+.port-donut-wrap { position:relative; min-height:200px; display:flex; align-items:center; justify-content:center; }
+.port-donut-svg { width:200px; height:200px; }
+.port-donut-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+.port-donut-center-val { font-family:var(--font-display); font-size:18px; font-weight:800; line-height:1; }
+.port-donut-center-sub { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.4px; margin-top:4px; }
+
+.port-legend { display:flex; flex-direction:column; gap:8px; }
+.port-legend-item { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:8px 6px; cursor:pointer; border-radius:8px; transition:background .15s; }
+.port-legend-item:hover { background:var(--surface2); }
+.port-legend-item.muted { opacity:.4; }
+.port-legend-cb { width:18px; height:18px; border:1.5px solid var(--border-strong); border-radius:4px; background:var(--surface); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.port-legend-item.checked .port-legend-cb { background:var(--accent); border-color:var(--accent); }
+.port-legend-item.checked .port-legend-cb svg { color:#fff; }
+.port-legend-cb svg { width:12px; height:12px; opacity:0; }
+.port-legend-item.checked .port-legend-cb svg { opacity:1; }
+.port-legend-label { font-size:13px; font-weight:500; min-width:0; }
+.port-legend-bar { height:3px; background:var(--surface3); border-radius:2px; margin-top:4px; overflow:hidden; }
+.port-legend-bar-fill { height:100%; border-radius:2px; }
+.port-legend-pct { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--text-muted); }
+
+/* Securities table */
+.sec-tbl-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.sec-tbl-head-title { font-family:var(--font-display); font-weight:700; font-size:15px; flex:1; }
+.sec-tbl-cols-btn { background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); padding:5px 9px; border-radius:6px; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:5px; }
+.sec-tbl-cols-btn:hover { background:var(--surface3); color:var(--text); }
+.sec-tbl-cols-btn svg { width:13px; height:13px; }
+
+.sec-row-brand { display:flex; align-items:center; gap:10px; min-width:0; }
+.brand-logo { width:28px; height:28px; border-radius:6px; flex-shrink:0; object-fit:cover; background:var(--surface2); }
+.brand-initial { width:28px; height:28px; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:10px; color:#fff; }
+.sec-name { display:flex; flex-direction:column; min-width:0; }
+.sec-name-primary { font-weight:600; font-size:13px; line-height:1.2; }
+.sec-name-secondary { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+
+.sortable { cursor:pointer; user-select:none; }
+.sortable:hover { background:var(--surface3) !important; }
+.sort-ind { display:inline-block; opacity:.4; margin-left:4px; font-size:10px; }
+.sortable.sort-asc .sort-ind, .sortable.sort-desc .sort-ind { opacity:1; }
+
+/* Bottom sheet (mobile) — slide up panel for column picker, filters */
+.sheet-bg { position:fixed; inset:0; background:rgba(15,27,61,.5); backdrop-filter:blur(3px); display:none; align-items:flex-end; justify-content:center; z-index:120; }
+.sheet-bg.open { display:flex; }
+.sheet {
+  background:var(--surface); border-radius:16px 16px 0 0;
+  width:100%; max-width:540px; max-height:85vh; overflow:hidden;
+  display:flex; flex-direction:column; box-shadow:0 -12px 32px rgba(15,27,61,.2);
+  animation:sheetUp .25s ease;
+}
+@keyframes sheetUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+@media (min-width:769px) { .sheet { border-radius:14px; align-self:center; max-height:80vh; } .sheet-bg { align-items:center; } }
+.sheet-handle { width:32px; height:4px; background:var(--border-strong); border-radius:3px; margin:8px auto 4px; }
+.sheet-head { display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--border); }
+.sheet-title { font-family:var(--font-display); font-weight:700; font-size:16px; flex:1; }
+.sheet-reset { background:transparent; border:none; color:var(--accent); font-weight:600; font-size:13px; cursor:pointer; font-family:inherit; }
+.sheet-body { padding:8px 12px; overflow-y:auto; flex:1; }
+.sheet-foot { padding:12px 20px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); background:var(--surface); }
+.sheet-save { width:100%; background:var(--navy); color:#fff; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+.sheet-save:hover { background:var(--navy-dark); }
+:root[data-theme="dark"] .sheet-save { background:var(--mint); color:var(--navy); }
+
+.col-pick-item { display:flex; align-items:center; gap:12px; padding:10px 8px; cursor:pointer; border-radius:8px; }
+.col-pick-item:hover { background:var(--surface2); }
+.col-pick-cb { width:22px; height:22px; border:1.5px solid var(--border-strong); border-radius:5px; background:var(--surface); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.col-pick-item.checked .col-pick-cb { background:var(--accent); border-color:var(--accent); }
+.col-pick-cb svg { width:14px; height:14px; color:#fff; opacity:0; }
+.col-pick-item.checked .col-pick-cb svg { opacity:1; }
+.col-pick-label { font-size:14px; color:var(--text); }
+
 /* Settings menu items */
 .sm-item {
   display:flex; align-items:center; gap:10px; padding:10px 12px;
@@ -679,6 +762,21 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   </div>
 </div>
 
+<!-- Column picker bottom-sheet -->
+<div class="sheet-bg" id="colPickerSheet" onclick="if(event.target===this)closeColPicker()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">Columns</div>
+      <button class="sheet-reset" onclick="resetColPicker()">Reset</button>
+    </div>
+    <div class="sheet-body" id="colPickBody"></div>
+    <div class="sheet-foot">
+      <button class="sheet-save" onclick="saveColPicker()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
@@ -1094,6 +1192,306 @@ function computeYtd() {
   return { start: startVal, current: currentVal, abs, pct };
 }
 
+/* Brand logo helper — Clearbit + initial fallback.
+   Maps common tickers to domains. User can override via ticker.domain. */
+const TICKER_DOMAINS = {
+  AAPL:'apple.com', MSFT:'microsoft.com', GOOGL:'abc.xyz', GOOG:'abc.xyz', NVDA:'nvidia.com',
+  AMZN:'amazon.com', META:'meta.com', TSLA:'tesla.com', NFLX:'netflix.com', ADBE:'adobe.com',
+  CRM:'salesforce.com', ORCL:'oracle.com', IBM:'ibm.com', CSCO:'cisco.com', INTC:'intel.com',
+  AMD:'amd.com', AVGO:'broadcom.com', TXN:'ti.com', QCOM:'qualcomm.com',
+  'ASML':'asml.com', 'ASML.AS':'asml.com', 'ASM.AS':'asm.com', 'BESI.AS':'besi.com',
+  'ADYEN.AS':'adyen.com', 'AD.AS':'aholddelhaize.com', 'INGA.AS':'ing.com', 'PHIA.AS':'philips.com',
+  'WKL.AS':'wolterskluwer.com', 'AKZA.AS':'akzonobel.com', 'KPN.AS':'kpn.com', 'RAND.AS':'randstad.com',
+  'UNA.AS':'unilever.com', 'SHEL.AS':'shell.com', 'MT.AS':'arcelormittal.com', 'NN.AS':'nn-group.com',
+  'AGN.AS':'aegon.com', 'BAYN.DE':'bayer.com', 'SAP.DE':'sap.com', 'SIE.DE':'siemens.com',
+  'BMW.DE':'bmw.com', 'VOW3.DE':'volkswagenag.com', 'ALV.DE':'allianz.com',
+  JNJ:'jnj.com', PFE:'pfizer.com', UNH:'unitedhealthgroup.com', LLY:'lilly.com', MRK:'merck.com',
+  ABBV:'abbvie.com', BMY:'bms.com', AMGN:'amgen.com', GILD:'gilead.com',
+  KO:'coca-colacompany.com', PEP:'pepsico.com', PG:'pg.com', WMT:'walmart.com', COST:'costco.com',
+  MCD:'mcdonalds.com', SBUX:'starbucks.com', NKE:'nike.com', HD:'homedepot.com', LOW:'lowes.com',
+  JPM:'jpmorganchase.com', BAC:'bankofamerica.com', WFC:'wellsfargo.com', GS:'goldmansachs.com',
+  MS:'morganstanley.com', C:'citigroup.com', BLK:'blackrock.com', V:'visa.com', MA:'mastercard.com',
+  XOM:'exxonmobil.com', CVX:'chevron.com', COP:'conocophillips.com', SHEL:'shell.com',
+  CAT:'caterpillar.com', HON:'honeywell.com', BA:'boeing.com', GE:'ge.com', UPS:'ups.com',
+  NEE:'nexteraenergy.com', DUK:'duke-energy.com',
+  O:'realtyincome.com', SPG:'simon.com', AMT:'americantower.com', PLD:'prologis.com',
+  T:'att.com', VZ:'verizon.com', DIS:'disney.com', NFLX2:'netflix.com',
+  /* ETFs — show the issuer */
+  'IWDA.AS':'ishares.com', 'VWRL.AS':'vanguard.com', 'VWCE.DE':'vanguard.com', 'EUNL.DE':'ishares.com',
+  'SPY':'spdr.com', 'QQQ':'invesco.com', 'VOO':'vanguard.com', 'VTI':'vanguard.com',
+};
+
+function tickerDomain(t) {
+  if (!t) return null;
+  if (t.domain) return t.domain;
+  return TICKER_DOMAINS[t.symbol] || null;
+}
+
+function brandColorFor(symbol) {
+  /* Deterministic color from ticker hash */
+  let h = 0;
+  for (let i = 0; i < symbol.length; i++) h = (h * 31 + symbol.charCodeAt(i)) & 0xffffffff;
+  const palette = ['#0F1B3D', '#0D3D3A', '#5BB8F5', '#F5C25B', '#E96A6A', '#9B7BFF', '#5BE5C2', '#D85BB8', '#00B57E'];
+  return palette[Math.abs(h) % palette.length];
+}
+
+function brandLogoHTML(ticker) {
+  const t = typeof ticker === 'string' ? getTicker(ticker) : ticker;
+  if (!t) return `<div class="brand-initial" style="background:var(--text-muted)">·</div>`;
+  const domain = tickerDomain(t);
+  const initial = (t.symbol || '?').replace(/\..*/, '').slice(0, 4);
+  const color = brandColorFor(t.symbol);
+  if (domain) {
+    /* DuckDuckGo icon service — free, no key, decent quality */
+    const url = `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`;
+    return `<img class="brand-logo" src="${url}" alt="${escapeHtml(t.symbol)}" loading="lazy" onerror="this.outerHTML='<div class=\\'brand-initial\\' style=\\'background:${color}\\'>${escapeHtml(initial)}</div>'">`;
+  }
+  return `<div class="brand-initial" style="background:${color}">${escapeHtml(initial)}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PORTFOLIO MODULE (Fase 2)
+   ═══════════════════════════════════════════════════════════ */
+
+const PORT_BREAKDOWNS = [
+  { key: 'sector',   label: 'Sector',   getter: tk => tk?.sector || 'Onbekend' },
+  { key: 'industry', label: 'Industry', getter: tk => tk?.industry || 'Onbekend' },
+  { key: 'type',     label: 'Type',     getter: tk => { const m = { stock:'Aandeel', etf:'ETF', bond:'Obligatie', fund:'Fonds', crypto:'Crypto', metal:'Edelmetaal', reit:'REIT', other:'Overig' }; return m[tk?.type || 'stock'] || 'Aandeel'; } },
+  { key: 'country',  label: 'Country',  getter: tk => tk?.country || 'Onbekend' },
+  { key: 'currency', label: 'Currency', getter: tk => tk?.currency || 'EUR' },
+];
+
+let _portBreakdown = 'sector';
+let _portHidden = new Set();
+let _portSort = { key: 'worth', dir: 'desc' };
+const LS_PORT_COLUMNS = 'herling_dividend_port_columns';
+
+function valueOfHolding(h, tk) {
+  const fx = tk ? fxForCurrency(tk.currency) : 1;
+  const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
+  return h.qty * priceEur;
+}
+function unrealPLOfHolding(h, tk) { return valueOfHolding(h, tk) - h.costEur; }
+function totalDividendForTicker(symbol) {
+  return pfDividends().filter(d => d.ticker === symbol).reduce((s, d) => s + ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)), 0);
+}
+function holdingPeriodForTicker(symbol) {
+  const firstBuy = pfTransactions().filter(t => t.ticker === symbol && t.type === 'koop').sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0];
+  if (!firstBuy) return '—';
+  const days = Math.round((Date.now() - new Date(firstBuy.date).getTime()) / 86400000);
+  if (days < 60) return days + 'd';
+  if (days < 730) return Math.round(days / 30) + ' mnd';
+  return (days / 365).toFixed(1) + ' jr';
+}
+
+const SEC_COLUMNS = [
+  { key: 'worth',        label: 'Portfolio worth',      def: true,  num: true, get: (h, tk) => valueOfHolding(h, tk),                                          fmt: v => fmtEUR(v) },
+  { key: 'unrealPL',     label: 'Unrealised P/L',       def: true,  num: true, get: (h, tk) => unrealPLOfHolding(h, tk),                                       fmt: v => (v >= 0 ? '+' : '') + fmtEUR(v), color: true },
+  { key: 'unrealPLPct',  label: 'Unrealised P/L (%)',   def: true,  num: true, get: (h, tk) => h.costEur > 0 ? (unrealPLOfHolding(h, tk) / h.costEur) * 100 : 0, fmt: v => (v >= 0 ? '+' : '') + fmtPct(v, 2), color: true },
+  { key: 'shares',       label: 'Number of shares',     def: false, num: true, get: h => h.qty,                                                                fmt: v => fmtNum(v, 4) },
+  { key: 'invested',     label: 'Total invested',       def: false, num: true, get: h => h.costEur,                                                            fmt: v => fmtEUR(v) },
+  { key: 'avgPrice',     label: 'Average cost',         def: false, num: true, get: h => h.qty > 0 ? h.costEur / h.qty : 0,                                    fmt: v => fmtEUR(v) },
+  { key: 'currentPrice', label: 'Current price',        def: false, num: true, get: (h, tk) => tk?.price ?? null,                                              fmt: (v, h, tk) => v != null ? fmtNum(v, 2) + ' ' + (tk?.currency || '') : '—' },
+  { key: 'dividends',    label: 'Dividends (received)', def: false, num: true, get: h => totalDividendForTicker(h.ticker),                                     fmt: v => v > 0 ? fmtEUR(v) : '—' },
+  { key: 'realPL',       label: 'Realised P/L',         def: false, num: true, get: h => h.realizedEur || 0,                                                   fmt: v => v ? (v >= 0 ? '+' : '') + fmtEUR(v) : '—', color: true },
+  { key: 'totalPL',      label: 'Total P/L',            def: false, num: true, get: (h, tk) => unrealPLOfHolding(h, tk) + (h.realizedEur || 0),                fmt: v => (v >= 0 ? '+' : '') + fmtEUR(v), color: true },
+  { key: 'totalPLPct',   label: 'Total P/L (%)',        def: false, num: true, get: (h, tk) => h.costEur > 0 ? ((unrealPLOfHolding(h, tk) + (h.realizedEur || 0)) / h.costEur) * 100 : 0, fmt: v => (v >= 0 ? '+' : '') + fmtPct(v, 2), color: true },
+  { key: 'yoc',          label: 'Yield on cost',        def: false, num: true, get: h => h.costEur > 0 ? (totalDividendForTicker(h.ticker) / h.costEur) * 100 : 0, fmt: v => v > 0 ? fmtPct(v, 2) : '—' },
+  { key: 'fwdDiv',       label: 'Forward dividend',     def: false, num: true, get: (h, tk) => { const fx = tk ? fxForCurrency(tk.currency) : 1; return (tk?.dps || 0) * h.qty * fx; }, fmt: v => v > 0 ? fmtEUR(v) : '—' },
+  { key: 'holdingPeriod',label: 'Holding period',       def: false, num: false, get: h => holdingPeriodForTicker(h.ticker),                                    fmt: v => v },
+];
+
+function getPortColumns() {
+  const saved = localStorage.getItem(LS_PORT_COLUMNS);
+  if (saved) try { const arr = JSON.parse(saved); if (Array.isArray(arr) && arr.length) return arr; } catch (e) {}
+  return SEC_COLUMNS.filter(c => c.def).map(c => c.key);
+}
+function setPortColumns(arr) { localStorage.setItem(LS_PORT_COLUMNS, JSON.stringify(arr)); }
+
+function setPortBreakdown(b) {
+  _portBreakdown = b;
+  _portHidden = new Set();
+  renderPortfolio();
+}
+function togglePortLegendItem(key) {
+  if (_portHidden.has(key)) _portHidden.delete(key); else _portHidden.add(key);
+  renderPortBreakdownDonutAndLegend();
+}
+function sortBy(key) {
+  if (_portSort.key === key) _portSort.dir = _portSort.dir === 'desc' ? 'asc' : 'desc';
+  else { _portSort.key = key; _portSort.dir = 'desc'; }
+  renderSecTable();
+}
+
+const PALETTE = ['#00B57E', '#5BB8F5', '#F5C25B', '#9B7BFF', '#E96A6A', '#5BE5C2', '#D85BB8', '#7BD85B', '#5B8AFF', '#FFCC5B', '#B85BE5', '#FF9B5B'];
+
+function renderPortfolio() {
+  const c = document.getElementById('content');
+  if (!c) return;
+  c.innerHTML = `
+    <div class="port-section">
+      <div class="port-tabs" id="portBreakdownTabs">
+        ${PORT_BREAKDOWNS.map(b => `<button class="port-tab ${b.key === _portBreakdown ? 'active' : ''}" data-bd="${b.key}" onclick="setPortBreakdown('${b.key}')">${b.label}</button>`).join('')}
+      </div>
+      <div class="port-donut-row">
+        <div class="port-donut-wrap" id="portDonut"></div>
+        <div class="port-legend" id="portLegend"></div>
+      </div>
+    </div>
+    <div class="port-section">
+      <div class="sec-tbl-head">
+        <div class="sec-tbl-head-title">Securities <span class="text-muted" style="font-weight:500;font-size:13px;font-family:var(--font-mono);">${computeHoldings().length}</span></div>
+        <button class="sec-tbl-cols-btn" onclick="openColPicker()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Columns
+        </button>
+      </div>
+      <div class="tbl-wrap" id="secTblWrap"></div>
+    </div>
+  `;
+  renderPortBreakdownDonutAndLegend();
+  renderSecTable();
+}
+
+function renderPortBreakdownDonutAndLegend() {
+  const donut = document.getElementById('portDonut');
+  const legend = document.getElementById('portLegend');
+  if (!donut || !legend) return;
+  const bd = PORT_BREAKDOWNS.find(x => x.key === _portBreakdown);
+  const holdings = computeHoldings();
+  if (!holdings.length) {
+    donut.innerHTML = '<div class="empty" style="padding:20px;">Geen posities</div>';
+    legend.innerHTML = '';
+    return;
+  }
+  const groups = new Map();
+  holdings.forEach(h => {
+    const tk = getTicker(h.ticker);
+    const key = bd.getter(tk);
+    const value = valueOfHolding(h, tk);
+    groups.set(key, (groups.get(key) || 0) + value);
+  });
+  const items = [...groups.entries()].sort((a, b) => b[1] - a[1]);
+  const total = items.reduce((s, x) => s + x[1], 0);
+  const visibleTotal = items.reduce((s, [k, v]) => s + (_portHidden.has(k) ? 0 : v), 0);
+  /* Donut SVG */
+  const W = 200, H = 200, cx = W / 2, cy = H / 2, rOuter = 85, rInner = 56;
+  let a0 = -Math.PI / 2;
+  let arcs = '';
+  items.forEach(([k, v], i) => {
+    if (_portHidden.has(k)) return;
+    const a1 = a0 + (v / visibleTotal) * Math.PI * 2;
+    const x0o = cx + rOuter * Math.cos(a0), y0o = cy + rOuter * Math.sin(a0);
+    const x1o = cx + rOuter * Math.cos(a1), y1o = cy + rOuter * Math.sin(a1);
+    const x0i = cx + rInner * Math.cos(a1), y0i = cy + rInner * Math.sin(a1);
+    const x1i = cx + rInner * Math.cos(a0), y1i = cy + rInner * Math.sin(a0);
+    const large = (a1 - a0) > Math.PI ? 1 : 0;
+    const color = PALETTE[i % PALETTE.length];
+    arcs += `<path d="M ${x0o} ${y0o} A ${rOuter} ${rOuter} 0 ${large} 1 ${x1o} ${y1o} L ${x0i} ${y0i} A ${rInner} ${rInner} 0 ${large} 0 ${x1i} ${y1i} Z" fill="${color}" stroke="var(--surface)" stroke-width="2"><title>${escapeHtml(k)}: ${fmtEUR(v)} (${fmtPct(v / visibleTotal * 100, 1)})</title></path>`;
+    a0 = a1;
+  });
+  donut.innerHTML = `
+    <svg class="port-donut-svg" viewBox="0 0 ${W} ${H}">${arcs}</svg>
+    <div class="port-donut-center">
+      <div class="port-donut-center-val">${fmtEUR(visibleTotal)}</div>
+      <div class="port-donut-center-sub">${bd.label}</div>
+    </div>
+  `;
+  /* Legend */
+  legend.innerHTML = items.map(([k, v], i) => {
+    const color = PALETTE[i % PALETTE.length];
+    const pct = v / total * 100;
+    const checked = !_portHidden.has(k);
+    return `<div class="port-legend-item ${checked ? 'checked' : 'muted'}" onclick="togglePortLegendItem('${escapeHtml(k).replace(/'/g, '\\\'')}')">
+      <span class="port-legend-cb"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 8l3 3 7-7"/></svg></span>
+      <div style="min-width:0;">
+        <div class="port-legend-label">${escapeHtml(k)}</div>
+        <div class="port-legend-bar"><div class="port-legend-bar-fill" style="width:${pct}%; background:${color};"></div></div>
+      </div>
+      <div class="port-legend-pct">${fmtPct(pct, 1)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSecTable() {
+  const wrap = document.getElementById('secTblWrap');
+  if (!wrap) return;
+  const cols = getPortColumns().map(k => SEC_COLUMNS.find(c => c.key === k)).filter(Boolean);
+  const holdings = computeHoldings();
+  if (!holdings.length) {
+    wrap.innerHTML = `<div class="empty" style="padding:30px;">
+      <div class="empty-title">Geen posities</div>
+      <div class="empty-msg">Voeg een koop-actie toe via de Actions-tab.</div>
+    </div>`;
+    return;
+  }
+  /* Sort */
+  const sorted = holdings.slice().sort((a, b) => {
+    const ta = getTicker(a.ticker), tb = getTicker(b.ticker);
+    const col = SEC_COLUMNS.find(c => c.key === _portSort.key);
+    const va = col ? col.get(a, ta) : 0;
+    const vb = col ? col.get(b, tb) : 0;
+    if (typeof va === 'string') return _portSort.dir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+    return _portSort.dir === 'desc' ? (vb - va) : (va - vb);
+  });
+  const dirInd = key => _portSort.key === key ? (_portSort.dir === 'desc' ? ' ▼' : ' ▲') : '';
+  const head = `<th class="sortable ${_portSort.key === 'name' ? 'sort-' + _portSort.dir : ''}" onclick="sortBy('name')">Security<span class="sort-ind">${dirInd('name') || ''}</span></th>` +
+    cols.map(c => `<th class="num sortable ${_portSort.key === c.key ? 'sort-' + _portSort.dir : ''}" onclick="sortBy('${c.key}')">${c.label}<span class="sort-ind">${dirInd(c.key) || ''}</span></th>`).join('');
+  const body = sorted.map(h => {
+    const tk = getTicker(h.ticker);
+    const cells = cols.map(c => {
+      const v = c.get(h, tk);
+      const formatted = c.fmt(v, h, tk);
+      const cls = c.color && typeof v === 'number' ? (v > 0 ? 'pos' : v < 0 ? 'neg' : '') : '';
+      return `<td class="num ${cls}">${formatted}</td>`;
+    }).join('');
+    return `<tr style="cursor:pointer" onclick="openTickerModal('${tk?.id || ''}')">
+      <td>
+        <div class="sec-row-brand">
+          ${brandLogoHTML(tk || { symbol: h.ticker })}
+          <div class="sec-name">
+            <span class="sec-name-primary">${escapeHtml(tk?.name || h.ticker)}${tk?.aristocrat ? ' <span style="color:var(--gold)" title="Aristocrat">♛</span>' : ''}</span>
+            <span class="sec-name-secondary">${escapeHtml(h.ticker)}</span>
+          </div>
+        </div>
+      </td>${cells}
+    </tr>`;
+  }).join('');
+  /* sort name special-case */
+  if (_portSort.key === 'name') {
+    sorted.sort((a, b) => {
+      const na = getTicker(a.ticker)?.name || a.ticker, nb = getTicker(b.ticker)?.name || b.ticker;
+      return _portSort.dir === 'desc' ? nb.localeCompare(na) : na.localeCompare(nb);
+    });
+  }
+  wrap.innerHTML = `<table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/* Column picker bottom sheet */
+function openColPicker() {
+  const cur = new Set(getPortColumns());
+  const body = SEC_COLUMNS.map(c => `<div class="col-pick-item ${cur.has(c.key) ? 'checked' : ''}" data-col="${c.key}" onclick="this.classList.toggle('checked')">
+    <span class="col-pick-cb"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 8l3 3 7-7"/></svg></span>
+    <span class="col-pick-label">${escapeHtml(c.label)}</span>
+  </div>`).join('');
+  document.getElementById('colPickBody').innerHTML = body;
+  document.getElementById('colPickerSheet').classList.add('open');
+}
+function closeColPicker() { document.getElementById('colPickerSheet').classList.remove('open'); }
+function resetColPicker() {
+  document.querySelectorAll('#colPickBody .col-pick-item').forEach(el => {
+    const def = SEC_COLUMNS.find(c => c.key === el.dataset.col)?.def;
+    el.classList.toggle('checked', !!def);
+  });
+}
+function saveColPicker() {
+  const selected = [...document.querySelectorAll('#colPickBody .col-pick-item.checked')].map(el => el.dataset.col);
+  if (!selected.length) { appToast('Selecteer minstens 1 kolom', { type: 'warn' }); return; }
+  setPortColumns(selected);
+  closeColPicker();
+  renderSecTable();
+}
+
 /* ═══════════════════════════════════════════════════════════
    YAHOO FINANCE INTEGRATION
    ═══════════════════════════════════════════════════════════ */
@@ -1260,7 +1658,7 @@ function portfolioStats() {
 
 /* Primary routes (top nav + bottom tab). Aliases voor oude hash-namen. */
 const ROUTES = {
-  portfolio:   { title: 'Portfolio',   render: renderDashboard,    actions: () => '' },
+  portfolio:   { title: 'Portfolio',   render: renderPortfolio,    actions: () => '' },
   performance: { title: 'Performance', render: renderProjection,   actions: () => '' },
   dividend:    { title: 'Dividend',    render: renderDividends,    actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Toevoegen</button>` },
   calendar:    { title: 'Calendar',    render: renderCalendar,     actions: () => '' },
@@ -1301,8 +1699,7 @@ function renderAll() {
   document.querySelectorAll('.bt-item').forEach(el => el.classList.toggle('active', el.dataset.route === route));
   /* Page head */
   document.getElementById('pageTitle').textContent = def.title;
-  const pf = activePortfolio();
-  document.getElementById('pageSub').textContent = pf ? `Portefeuille: ${pf.name}` : '';
+  document.getElementById('pageSub').textContent = '';
   document.getElementById('pageActions').innerHTML = def.actions();
   /* Render body */
   document.getElementById('content').innerHTML = '';
