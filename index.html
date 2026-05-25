@@ -227,6 +227,29 @@ button { font-family:inherit; }
 .col-pick-item.checked .col-pick-cb svg { opacity:1; }
 .col-pick-label { font-size:14px; color:var(--text); }
 
+/* Ticker autocomplete dropdown */
+.tx-ticker-wrap { position:relative; }
+.tx-ticker-dd {
+  position:absolute; top:100%; left:0; right:0; margin-top:4px;
+  background:var(--surface); border:1px solid var(--border-strong);
+  border-radius:8px; box-shadow:var(--shadow-lg);
+  max-height:300px; overflow-y:auto; z-index:50;
+}
+.tx-ticker-dd-item {
+  padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:10px;
+  border-bottom:1px solid var(--border);
+}
+.tx-ticker-dd-item:hover, .tx-ticker-dd-item.focus { background:var(--surface2); }
+.tx-ticker-dd-item:last-child { border-bottom:none; }
+.tx-ticker-dd-sym { font-family:var(--font-mono); font-weight:700; font-size:13px; min-width:90px; }
+.tx-ticker-dd-name { flex:1; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); }
+.tx-ticker-dd-exch { font-size:10px; color:var(--text-hint); font-family:var(--font-mono); text-transform:uppercase; padding:2px 5px; background:var(--surface2); border-radius:4px; flex-shrink:0; }
+.tx-ticker-dd-empty, .tx-ticker-dd-loading {
+  padding:14px; text-align:center; color:var(--text-muted); font-size:13px;
+}
+.tx-ticker-dd-loading::after { content:'…'; animation:dots 1.2s infinite; }
+@keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+
 /* Settings menu items */
 .sm-item {
   display:flex; align-items:center; gap:10px; padding:10px 12px;
@@ -556,7 +579,13 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
         </select>
       </div>
       <div><label>Datum</label><input class="input" type="date" id="txDate"></div>
-      <div class="tx-trade-only"><label>Ticker</label><input class="input" id="txTicker" placeholder="bv. AAPL" autocomplete="off"></div>
+      <div class="tx-trade-only">
+        <label>Ticker of bedrijfsnaam</label>
+        <div class="tx-ticker-wrap">
+          <input class="input" id="txTicker" placeholder="bv. AAPL of Apple" autocomplete="off">
+          <div class="tx-ticker-dd" id="txTickerDD" style="display:none;"></div>
+        </div>
+      </div>
       <div><label>Valuta</label>
         <select class="select" id="txCurrency">
           <option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option><option>CAD</option><option>JPY</option><option>AUD</option>
@@ -1614,6 +1643,22 @@ async function refreshSingleTicker(id) {
   else appToast(`${t.symbol}: niet gevonden of proxy down`, { type: 'error' });
 }
 
+/* Yahoo Finance search — finds tickers by name or symbol */
+async function yahooSearch(q) {
+  if (!q || q.trim().length < 2) return [];
+  const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q.trim())}&quotesCount=8&newsCount=0&enableFuzzyQuery=false`;
+  const json = await yahooFetch(url);
+  if (!json?.quotes) return [];
+  return json.quotes
+    .filter(qt => qt.symbol && qt.quoteType && ['EQUITY', 'ETF', 'MUTUALFUND', 'CRYPTOCURRENCY', 'INDEX'].includes(qt.quoteType))
+    .map(qt => ({
+      symbol: qt.symbol,
+      name: qt.longname || qt.shortname || '',
+      exchange: qt.exchDisp || qt.exchange || '',
+      type: qt.quoteType,
+    }));
+}
+
 function yahooLastFetchAgo() {
   const iso = localStorage.getItem(LS_YAHOO_LAST);
   if (!iso) return null;
@@ -1797,7 +1842,7 @@ let editingTxId = null;
 function openTxModal(id = null) {
   editingTxId = id;
   const tx = id ? rawState.transactions.find(t => t.id === id) : null;
-  document.getElementById('txModalTitle').textContent = tx ? 'Transactie bewerken' : 'Nieuwe transactie';
+  document.getElementById('txModalTitle').textContent = tx ? 'Mutatie bewerken' : 'Nieuwe mutatie';
   document.getElementById('txType').value = tx?.type || 'koop';
   document.getElementById('txDate').value = tx?.date || todayISO();
   document.getElementById('txTicker').value = tx?.ticker || '';
@@ -1811,7 +1856,98 @@ function openTxModal(id = null) {
   document.getElementById('txDeleteBtn').classList.toggle('hidden', !tx);
   document.getElementById('txModal').classList.add('open');
   onTxTypeChange();
+  attachTxTickerSearch();
   setTimeout(() => { const isCash = ['storting','opname'].includes(document.getElementById('txType').value); document.getElementById(isCash ? 'txAmount' : 'txTicker').focus(); }, 50);
+}
+
+/* Ticker autocomplete in tx modal */
+let _tickerSearchTimer = null;
+let _tickerSearchToken = 0;
+let _tickerSearchAttached = false;
+function attachTxTickerSearch() {
+  if (_tickerSearchAttached) return;
+  _tickerSearchAttached = true;
+  const input = document.getElementById('txTicker');
+  if (!input) return;
+  input.addEventListener('input', e => {
+    const q = e.target.value.trim();
+    clearTimeout(_tickerSearchTimer);
+    if (q.length < 2) { hideTickerDropdown(); return; }
+    _tickerSearchTimer = setTimeout(() => triggerTickerSearch(q), 350);
+  });
+  input.addEventListener('focus', () => {
+    const q = input.value.trim();
+    if (q.length >= 2) triggerTickerSearch(q);
+  });
+  /* Hide dropdown on outside click */
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.tx-ticker-wrap')) hideTickerDropdown();
+  });
+  /* Keyboard navigation */
+  input.addEventListener('keydown', e => {
+    const dd = document.getElementById('txTickerDD');
+    if (!dd || dd.style.display === 'none') return;
+    const items = [...dd.querySelectorAll('.tx-ticker-dd-item')];
+    if (!items.length) return;
+    const cur = items.findIndex(i => i.classList.contains('focus'));
+    if (e.key === 'ArrowDown') { e.preventDefault(); items.forEach(i => i.classList.remove('focus')); items[Math.min(items.length - 1, cur + 1)].classList.add('focus'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items.forEach(i => i.classList.remove('focus')); items[Math.max(0, cur - 1)].classList.add('focus'); }
+    else if (e.key === 'Enter') { e.preventDefault(); (items.find(i => i.classList.contains('focus')) || items[0]).click(); }
+    else if (e.key === 'Escape') { hideTickerDropdown(); }
+  });
+}
+async function triggerTickerSearch(q) {
+  const dd = document.getElementById('txTickerDD');
+  if (!dd) return;
+  const token = ++_tickerSearchToken;
+  dd.innerHTML = '<div class="tx-ticker-dd-loading">Zoeken</div>';
+  dd.style.display = 'block';
+  let results = [];
+  try { results = await yahooSearch(q); } catch (e) {}
+  if (token !== _tickerSearchToken) return;
+  if (!results.length) {
+    dd.innerHTML = '<div class="tx-ticker-dd-empty">Geen resultaten — controleer spelling of probeer een ander symbool</div>';
+    return;
+  }
+  dd.innerHTML = results.map((r, i) => `<div class="tx-ticker-dd-item${i === 0 ? ' focus' : ''}" onclick="pickTickerSearchResult('${escapeHtml(r.symbol)}', '${escapeHtml(r.name || '').replace(/'/g, '&#39;')}', '${escapeHtml(r.exchange || '')}')">
+    <span class="tx-ticker-dd-sym">${escapeHtml(r.symbol)}</span>
+    <span class="tx-ticker-dd-name">${escapeHtml(r.name || '')}</span>
+    <span class="tx-ticker-dd-exch">${escapeHtml(r.exchange || '')}</span>
+  </div>`).join('');
+}
+function pickTickerSearchResult(symbol, name, exchange) {
+  document.getElementById('txTicker').value = symbol;
+  hideTickerDropdown();
+  /* Fire Yahoo lookup to fill currency + cache stamdata */
+  prefillFromYahoo(symbol);
+}
+function hideTickerDropdown() {
+  const dd = document.getElementById('txTickerDD');
+  if (dd) dd.style.display = 'none';
+}
+async function prefillFromYahoo(symbol) {
+  const data = await fetchYahooFullData(symbol);
+  if (!data) return;
+  if (data.currency) {
+    const sel = document.getElementById('txCurrency');
+    if (sel && [...sel.options].some(o => o.value === data.currency)) sel.value = data.currency;
+    /* Reuse most recent fx for this currency if available */
+    const fx = fxForCurrency(data.currency);
+    const fxInput = document.getElementById('txFx');
+    if (fxInput && (!fxInput.value || +fxInput.value === 1) && fx !== 1) fxInput.value = fx;
+    /* Default price field if empty */
+    const priceInput = document.getElementById('txPrice');
+    if (priceInput && !priceInput.value && data.price != null) priceInput.value = data.price;
+  }
+  /* Cache full stamdata for later */
+  const t = ensureTicker(symbol);
+  if (data.price != null) { t.price = data.price; if (data.currency) t.currency = data.currency; }
+  if (data.name && !t.name) t.name = data.name;
+  if (data.dps != null) t.dps = data.dps;
+  if (data.freq) t.freq = data.freq;
+  if (data.lastExDate) t.exDate = data.lastExDate;
+  t.lastFetchedAt = new Date().toISOString();
+  scheduleSave();
 }
 function onTxTypeChange() {
   const t = document.getElementById('txType').value;
@@ -1843,7 +1979,11 @@ function saveTransaction() {
     const price = parseFloat(document.getElementById('txPrice').value);
     if (!ticker || isNaN(qty) || isNaN(price)) { appToast('Ticker, aantal en prijs zijn verplicht', { type: 'error' }); return; }
     data.ticker = ticker; data.qty = qty; data.price = price;
-    ensureTicker(ticker);
+    const tk = ensureTicker(ticker);
+    /* Fire-and-forget: if ticker stamdata is empty, fetch from Yahoo in background */
+    if (!tk.name && !tk.lastFetchedAt) {
+      refreshTicker(tk).then(ok => { if (ok) { scheduleSave(); renderAll(); appToast(`${ticker} stamdata opgehaald van Yahoo`); } });
+    }
   }
   if (editingTxId) {
     Object.assign(rawState.transactions.find(t => t.id === editingTxId), data);
