@@ -227,6 +227,88 @@ button { font-family:inherit; }
 .col-pick-item.checked .col-pick-cb svg { opacity:1; }
 .col-pick-label { font-size:14px; color:var(--text); }
 
+/* ─────────── Fase 3: Rendement ─────────── */
+.perf-subtabs { display:flex; gap:4px; margin-bottom:14px; border-bottom:1px solid var(--border); }
+.perf-subtab { background:transparent; border:none; padding:10px 14px; cursor:pointer; font-family:inherit; font-size:14px; font-weight:600; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px; }
+.perf-subtab:hover { color:var(--text); }
+.perf-subtab.active { color:var(--text); border-bottom-color:var(--mint); }
+
+.perf-period-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+.perf-period-pill { background:var(--surface); border:1px solid var(--border-strong); padding:6px 12px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:600; color:var(--text-muted); }
+.perf-period-pill:hover { color:var(--text); }
+.perf-period-pill.active { background:var(--navy); color:#fff; border-color:var(--navy); }
+:root[data-theme="dark"] .perf-period-pill.active { background:var(--mint); color:var(--navy); border-color:var(--mint); }
+
+.perf-summary { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px 20px; box-shadow:var(--shadow-sm); margin-bottom:14px; }
+.perf-summary-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; }
+.perf-summary-row + .perf-summary-row { border-top:1px solid var(--border); }
+.perf-summary-label { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; color:var(--text); }
+.perf-summary-dot { width:10px; height:10px; border-radius:2px; }
+.perf-summary-val { font-family:var(--font-mono); font-size:14px; font-weight:700; }
+
+.perf-bench-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+.perf-bench-pill { background:var(--surface); border:1px solid var(--border-strong); padding:6px 12px; border-radius:20px; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; color:var(--text-muted); display:inline-flex; align-items:center; gap:6px; }
+.perf-bench-pill:hover { background:var(--surface2); }
+.perf-bench-pill.active { background:var(--mint-soft); border-color:var(--mint); color:var(--text); }
+.perf-bench-dot { display:none; }
+.perf-bench-pill.active .perf-bench-dot { display:inline-block; width:6px; height:6px; border-radius:50%; }
+.perf-bench-pct { font-family:var(--font-mono); font-weight:700; }
+
+.perf-chart-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+
+/* ─────────── Fase 4: Agenda restyle ─────────── */
+.cal-toolbar { display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.cal-period-row { display:flex; align-items:center; gap:12px; flex:1; }
+.cal-period-title { font-family:var(--font-display); font-size:18px; font-weight:700; cursor:pointer; }
+.cal-period-title svg { width:14px; height:14px; opacity:.5; margin-left:4px; }
+.cal-events-btn { background:var(--surface); border:1px solid var(--border-strong); padding:7px 12px; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; color:var(--text); cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.cal-events-btn svg { width:14px; height:14px; }
+
+.cal-view-toggle { display:inline-flex; background:var(--surface2); border-radius:8px; padding:3px; }
+.cal-view-toggle button { background:transparent; border:none; padding:6px 14px; border-radius:6px; font-family:inherit; font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer; }
+.cal-view-toggle button.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow-sm); }
+
+.cal-nav { display:inline-flex; gap:4px; }
+.cal-nav button { background:var(--surface); border:1px solid var(--border-strong); width:32px; height:32px; border-radius:8px; cursor:pointer; color:var(--text); display:inline-flex; align-items:center; justify-content:center; }
+.cal-nav button:hover { background:var(--surface2); }
+.cal-nav svg { width:14px; height:14px; }
+
+.cal-week-group { margin-bottom:18px; }
+.cal-week-head {
+  display:flex; justify-content:space-between; align-items:baseline; padding:8px 0;
+  font-size:14px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border);
+}
+.cal-week-num { font-family:var(--font-mono); font-size:12px; color:var(--text-muted); font-weight:600; }
+.cal-day-row {
+  display:grid; grid-template-columns:60px auto 1fr auto; gap:12px; align-items:center;
+  padding:10px 4px; border-bottom:1px solid var(--border);
+}
+.cal-day-row:last-child { border-bottom:none; }
+.cal-day-row.today { background:var(--mint-soft); border-radius:6px; padding-left:8px; padding-right:8px; border-bottom:none; }
+.cal-day-label { font-size:12px; color:var(--text-muted); font-weight:600; }
+.cal-day-label-num { font-family:var(--font-display); font-weight:800; font-size:14px; color:var(--text); }
+.cal-day-name { font-weight:600; font-size:14px; }
+.cal-day-ev-type { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.3px; text-align:right; }
+
+/* ─────────── Fase 5: Mutaties restyle ─────────── */
+.act-hero {
+  background:linear-gradient(135deg, #D8C7B3 0%, #C9B89E 100%);
+  border-radius:var(--radius-lg); padding:20px 24px; margin-bottom:14px;
+  display:flex; align-items:center; gap:16px; position:relative; overflow:hidden;
+}
+.act-hero-text { color:var(--navy); }
+.act-hero-title { font-family:var(--font-display); font-weight:800; font-size:22px; line-height:1.1; }
+.act-hero-sub { font-size:13px; color:rgba(15,27,61,.7); margin-top:4px; font-weight:600; }
+.act-hero-icon { font-size:60px; line-height:1; opacity:.9; margin-left:auto; }
+
+.act-filters { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+.act-filters .input, .act-filters .select { width:auto; min-width:130px; }
+.act-filters .spacer { flex:1; }
+.act-date-range { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border-strong); padding:0; border-radius:8px; }
+.act-date-range input { border:none; background:transparent; padding:7px 8px; font-family:inherit; font-size:13px; color:var(--text); width:130px; }
+.act-date-range input:focus { outline:none; }
+.act-date-range-sep { color:var(--text-muted); padding:0 2px; }
+
 /* Ticker autocomplete dropdown */
 .tx-ticker-wrap { position:relative; }
 .tx-ticker-dd {
@@ -787,6 +869,21 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
       <button class="btn btn-danger" onclick="clearGistSync()">Loskoppelen</button>
       <button class="btn" onclick="closeGistModal()">Annuleren</button>
       <button class="btn btn-primary" onclick="saveGistConfig()">Verbinden</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar filter bottom-sheet -->
+<div class="sheet-bg" id="calFilterSheet" onclick="if(event.target===this)closeCalFilterSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">Events tonen</div>
+      <button class="sheet-reset" onclick="resetCalFilterSheet()">Standaard</button>
+    </div>
+    <div class="sheet-body" id="calFilterBody"></div>
+    <div class="sheet-foot">
+      <button class="sheet-save" onclick="saveCalFilterSheet()">Opslaan</button>
     </div>
   </div>
 </div>
@@ -1497,6 +1594,283 @@ function renderSecTable() {
 }
 
 /* Column picker bottom sheet */
+/* ═══════════════════════════════════════════════════════════
+   RENDEMENT MODULE (Fase 3)
+   ═══════════════════════════════════════════════════════════ */
+
+const PERF_PERIODS = [
+  { key: 'ytd',  label: 'YTD',  startFn: () => `${new Date().getFullYear() - 1}-12-31` },
+  { key: '1m',   label: '1M',   startFn: () => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 10); } },
+  { key: '3m',   label: '3M',   startFn: () => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); } },
+  { key: '1y',   label: '1J',   startFn: () => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return d.toISOString().slice(0, 10); } },
+  { key: '3y',   label: '3J',   startFn: () => { const d = new Date(); d.setFullYear(d.getFullYear() - 3); return d.toISOString().slice(0, 10); } },
+  { key: 'all',  label: 'Alles',startFn: () => null },
+];
+
+const BENCHMARKS = [
+  { key: 'AEX',  symbol: '^AEX',   label: 'AEX',          color: '#0F1B3D' },
+  { key: 'SPX',  symbol: '^GSPC',  label: 'S&P 500',      color: '#5BB8F5' },
+  { key: 'MSCI', symbol: 'URTH',   label: 'MSCI All World', color: '#F5C25B' },
+];
+
+const PERF_SUBTABS = [
+  { key: 'rendement', label: 'Rendement' },
+  { key: 'vermogen',  label: 'Vermogen' },
+  { key: 'kosten',    label: 'Kosten' },
+  { key: 'projectie', label: 'Projectie' },
+];
+
+let _perfSub = 'rendement';
+let _perfPeriod = 'ytd';
+let _perfBenchmarks = new Set();
+const _perfBenchData = new Map(); /* in-memory cache during render */
+
+function setPerfSub(k) { _perfSub = k; renderPerformance(); }
+function setPerfPeriod(k) { _perfPeriod = k; renderPerformance(); }
+function togglePerfBenchmark(k) {
+  if (_perfBenchmarks.has(k)) _perfBenchmarks.delete(k); else _perfBenchmarks.add(k);
+  renderPerformance();
+}
+
+function renderPerformance() {
+  const c = document.getElementById('content');
+  if (!c) return;
+  c.innerHTML = `
+    <div class="perf-subtabs">
+      ${PERF_SUBTABS.map(t => `<button class="perf-subtab ${t.key === _perfSub ? 'active' : ''}" onclick="setPerfSub('${t.key}')">${t.label}</button>`).join('')}
+    </div>
+    <div id="perfBody"></div>
+  `;
+  if (_perfSub === 'rendement') renderPerfRendement();
+  else if (_perfSub === 'vermogen') renderPerfVermogen();
+  else if (_perfSub === 'kosten') renderPerfKosten();
+  else if (_perfSub === 'projectie') { document.getElementById('content').innerHTML = `<div class="perf-subtabs">${PERF_SUBTABS.map(t => `<button class="perf-subtab ${t.key === _perfSub ? 'active' : ''}" onclick="setPerfSub('${t.key}')">${t.label}</button>`).join('')}</div><div id="perfBody"></div>`; const orig = document.getElementById.bind(document); document.getElementById = id => id === 'content' ? orig('perfBody') : orig(id); try { renderProjection(); } finally { document.getElementById = orig; } }
+}
+
+function periodStart() {
+  const p = PERF_PERIODS.find(x => x.key === _perfPeriod);
+  return p ? p.startFn() : null;
+}
+
+function renderPerfRendement() {
+  const body = document.getElementById('perfBody');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="perf-period-row">
+      ${PERF_PERIODS.map(p => `<button class="perf-period-pill ${p.key === _perfPeriod ? 'active' : ''}" onclick="setPerfPeriod('${p.key}')">${p.label}</button>`).join('')}
+    </div>
+    <div class="perf-summary" id="perfSummary"></div>
+    <div class="perf-bench-row" id="perfBenchRow"></div>
+    <div class="card"><div class="chart-wrap" id="perfChart"></div></div>
+  `;
+  renderPerfSummary();
+  renderPerfBenchRow();
+  renderPerfChart();
+}
+
+function renderPerfSummary() {
+  const startDate = periodStart();
+  const startVal = startDate ? valueAtDate(startDate) : (function () {
+    const txs = pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    return txs.length ? valueAtDate(txs[0].date) : 0;
+  })();
+  const curVal = portfolioStats().currentValue + computeCash();
+  const change = curVal - startVal;
+  const pct = startVal > 0 ? (change / startVal) * 100 : null;
+  const isLoss = change < 0;
+  const turnover = computeRealized();
+  document.getElementById('perfSummary').innerHTML = `
+    <div class="perf-summary-row">
+      <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--mint)"></span>Rendement</span>
+      <span class="perf-summary-val ${isLoss ? 'neg' : 'pos'}">${isLoss ? '' : '+'}${pct == null ? '—' : fmtPct(pct, 2)}</span>
+    </div>
+    <div class="perf-summary-row">
+      <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--text-muted)"></span>${isLoss ? 'Verlies' : 'Winst'}</span>
+      <span class="perf-summary-val ${isLoss ? 'neg' : 'pos'}">${isLoss ? '' : '+'}${fmtEUR(change)}</span>
+    </div>
+    <div class="perf-summary-row">
+      <span class="perf-summary-label">Gerealiseerd resultaat</span>
+      <span class="perf-summary-val ${turnover < 0 ? 'neg' : 'pos'}">${turnover >= 0 ? '+' : ''}${fmtEUR(turnover)}</span>
+    </div>
+  `;
+}
+
+function renderPerfBenchRow() {
+  const row = document.getElementById('perfBenchRow');
+  if (!row) return;
+  row.innerHTML = BENCHMARKS.map(b => {
+    const active = _perfBenchmarks.has(b.key);
+    const data = _perfBenchData.get(b.key);
+    let pct = '';
+    if (active && data && data.length >= 2) {
+      const startDate = periodStart();
+      const filtered = startDate ? data.filter(p => p.date >= startDate) : data;
+      if (filtered.length >= 2) {
+        const r = ((filtered[filtered.length - 1].close - filtered[0].close) / filtered[0].close) * 100;
+        pct = `<span class="perf-bench-pct ${r >= 0 ? 'pos' : 'neg'}">${r >= 0 ? '+' : ''}${fmtPct(r, 2)}</span>`;
+      }
+    }
+    return `<button class="perf-bench-pill ${active ? 'active' : ''}" onclick="togglePerfBenchmark('${b.key}')">
+      <span class="perf-bench-dot" style="background:${b.color}"></span>${b.label} ${pct}
+    </button>`;
+  }).join('');
+}
+
+async function renderPerfChart() {
+  const wrap = document.getElementById('perfChart');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="empty" style="padding:30px;">Laden…</div>';
+  /* Build portfolio value series */
+  const allSeries = buildValueSeries();
+  if (!allSeries.length) {
+    wrap.innerHTML = '<div class="empty" style="padding:30px;">Voeg eerst mutaties toe</div>';
+    return;
+  }
+  const startDate = periodStart() || allSeries[0].date;
+  const series = allSeries.filter(p => p.date >= startDate);
+  if (series.length < 2) {
+    wrap.innerHTML = '<div class="empty" style="padding:30px;">Te weinig data voor deze periode</div>';
+    return;
+  }
+  /* Normalize all to %-from-start */
+  const portStart = series[0].total || 1;
+  const portNorm = series.map(p => ({ date: p.date, pct: ((p.total - portStart) / portStart) * 100 }));
+  /* Fetch benchmarks */
+  const rangeMap = { ytd: '1y', '1m': '3mo', '3m': '6mo', '1y': '1y', '3y': '5y', all: 'max' };
+  const range = rangeMap[_perfPeriod] || '1y';
+  const benchSeries = [];
+  for (const b of BENCHMARKS) {
+    if (!_perfBenchmarks.has(b.key)) continue;
+    const data = await fetchBenchmarkHistory(b.symbol, range);
+    if (!data) continue;
+    _perfBenchData.set(b.key, data);
+    const filtered = data.filter(p => p.date >= startDate);
+    if (filtered.length < 2) continue;
+    const bStart = filtered[0].close;
+    benchSeries.push({ key: b.key, color: b.color, label: b.label, points: filtered.map(p => ({ date: p.date, pct: ((p.close - bStart) / bStart) * 100 })) });
+  }
+  /* Draw SVG */
+  const W = 800, H = 280, P = 44;
+  const allPts = [...portNorm, ...benchSeries.flatMap(b => b.points)];
+  const maxPct = Math.max(...allPts.map(p => p.pct), 5);
+  const minPct = Math.min(...allPts.map(p => p.pct), -5);
+  const range2 = maxPct - minPct;
+  const minT = new Date(series[0].date).getTime();
+  const maxT = new Date(series[series.length - 1].date).getTime() || minT + 1;
+  const xs = t => P + ((t - minT) / Math.max(1, maxT - minT)) * (W - P * 1.5);
+  const ys = v => P / 2 + (H - P) * (1 - (v - minPct) / range2);
+  let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  /* Zero line */
+  const zeroY = ys(0);
+  svg += `<line x1="${P}" y1="${zeroY}" x2="${W - 8}" y2="${zeroY}" stroke="currentColor" stroke-opacity="0.15" stroke-dasharray="3 3"/>`;
+  /* Y-axis ticks */
+  for (let i = 0; i <= 4; i++) {
+    const v = minPct + (range2 * i / 4);
+    const y = ys(v);
+    svg += `<text x="${P - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.5" font-family="JetBrains Mono">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</text>`;
+  }
+  /* Portfolio line */
+  const portPath = 'M ' + portNorm.map(p => `${xs(new Date(p.date).getTime())} ${ys(p.pct)}`).join(' L ');
+  const endPct = portNorm[portNorm.length - 1].pct;
+  svg += `<path d="${portPath}" fill="none" stroke="${endPct >= 0 ? 'var(--success)' : 'var(--danger)'}" stroke-width="2.5"/>`;
+  /* Benchmark lines */
+  benchSeries.forEach(b => {
+    const path = 'M ' + b.points.map(p => `${xs(new Date(p.date).getTime())} ${ys(p.pct)}`).join(' L ');
+    svg += `<path d="${path}" fill="none" stroke="${b.color}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  });
+  /* X-axis labels */
+  [0, Math.floor(series.length / 2), series.length - 1].forEach(i => {
+    svg += `<text x="${xs(new Date(series[i].date).getTime())}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">${fmtDate(series[i].date)}</text>`;
+  });
+  svg += '</svg>';
+  /* Legend */
+  let legend = `<div class="legend"><div class="legend-item"><span class="legend-dot" style="background:${endPct >= 0 ? 'var(--success)' : 'var(--danger)'}"></span>Portefeuille ${endPct >= 0 ? '+' : ''}${fmtPct(endPct, 2)}</div>`;
+  benchSeries.forEach(b => {
+    const last = b.points[b.points.length - 1].pct;
+    legend += `<div class="legend-item"><span class="legend-dot" style="background:${b.color}"></span>${b.label} ${last >= 0 ? '+' : ''}${fmtPct(last, 2)}</div>`;
+  });
+  legend += '</div>';
+  wrap.innerHTML = svg + legend;
+  renderPerfBenchRow(); /* update with benchmark % now that data is loaded */
+}
+
+function renderPerfVermogen() {
+  const body = document.getElementById('perfBody');
+  if (!body) return;
+  const series = buildValueSeries();
+  if (!series.length) { body.innerHTML = '<div class="empty" style="padding:30px;">Geen data</div>'; return; }
+  const curVal = portfolioStats().currentValue + computeCash();
+  const startVal = series[0].total || 0;
+  const change = curVal - startVal;
+  const totalDeposits = pfTransactions().filter(t => t.type === 'storting').reduce((s, t) => s + ((+t.amount || 0) * (+t.fx || 1)), 0);
+  const totalWithdrawals = pfTransactions().filter(t => t.type === 'opname').reduce((s, t) => s + ((+t.amount || 0) * (+t.fx || 1)), 0);
+  const totalGains = curVal - (totalDeposits - totalWithdrawals);
+  body.innerHTML = `
+    <div class="perf-summary">
+      <div class="perf-summary-row">
+        <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--mint)"></span>Huidig vermogen</span>
+        <span class="perf-summary-val">${fmtEUR(curVal)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Inleg totaal</span>
+        <span class="perf-summary-val">${fmtEUR(totalDeposits)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Opnames totaal</span>
+        <span class="perf-summary-val">${fmtEUR(totalWithdrawals)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Resultaat (winst/verlies)</span>
+        <span class="perf-summary-val ${totalGains >= 0 ? 'pos' : 'neg'}">${totalGains >= 0 ? '+' : ''}${fmtEUR(totalGains)}</span>
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">Vermogen over tijd</div></div><div class="chart-wrap" id="vermogenChart"></div></div>
+  `;
+  /* Reuse renderNwChart but target vermogenChart */
+  const orig = document.getElementById.bind(document);
+  document.getElementById = id => id === 'nwChart' ? orig('vermogenChart') : orig(id);
+  try { renderNwChart(); } finally { document.getElementById = orig; }
+}
+
+function renderPerfKosten() {
+  const body = document.getElementById('perfBody');
+  if (!body) return;
+  const txs = pfTransactions();
+  const tradingFees = txs.filter(t => t.type === 'koop' || t.type === 'verkoop').reduce((s, t) => s + ((+t.fee || 0) * (+t.fx || 1)), 0);
+  const cashFees = txs.filter(t => t.type === 'storting' || t.type === 'opname').reduce((s, t) => s + ((+t.fee || 0) * (+t.fx || 1)), 0);
+  const dividendTax = pfDividends().reduce((s, d) => s + ((+d.tax || 0) * (+d.fx || 1)), 0);
+  const grossDividend = pfDividends().reduce((s, d) => s + ((+d.gross || 0) * (+d.fx || 1)), 0);
+  const total = tradingFees + cashFees + dividendTax;
+  body.innerHTML = `
+    <div class="perf-summary">
+      <div class="perf-summary-row">
+        <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--rose)"></span>Totale kosten</span>
+        <span class="perf-summary-val neg">${fmtEUR(total)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Transactiekosten</span>
+        <span class="perf-summary-val">${fmtEUR(tradingFees)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Cash transactiekosten</span>
+        <span class="perf-summary-val">${fmtEUR(cashFees)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Bronbelasting op dividend</span>
+        <span class="perf-summary-val">${fmtEUR(dividendTax)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Bruto dividend ontvangen</span>
+        <span class="perf-summary-val pos">${fmtEUR(grossDividend)}</span>
+      </div>
+      <div class="perf-summary-row">
+        <span class="perf-summary-label"><strong>Netto dividend</strong></span>
+        <span class="perf-summary-val pos"><strong>${fmtEUR(grossDividend - dividendTax)}</strong></span>
+      </div>
+    </div>
+  `;
+}
+
 function openColPicker() {
   const cur = new Set(getPortColumns());
   const body = SEC_COLUMNS.map(c => `<div class="col-pick-item ${cur.has(c.key) ? 'checked' : ''}" data-col="${c.key}" onclick="this.classList.toggle('checked')">
@@ -1643,6 +2017,25 @@ async function refreshSingleTicker(id) {
   else appToast(`${t.symbol}: niet gevonden of proxy down`, { type: 'error' });
 }
 
+/* Benchmark historical price fetch (cached 4h) */
+const LS_BENCH_PREFIX = 'herling_dividend_bench_';
+async function fetchBenchmarkHistory(symbol, range = '1y') {
+  const cacheKey = `${LS_BENCH_PREFIX}${symbol}_${range}`;
+  try {
+    const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (c && Date.now() - c.ts < 4 * 3600 * 1000) return c.data;
+  } catch (e) {}
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
+  const json = await yahooFetch(url);
+  const result = json?.chart?.result?.[0];
+  if (!result) return null;
+  const ts = result.timestamp || [];
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  const data = ts.map((t, i) => ({ date: new Date(t * 1000).toISOString().slice(0, 10), close: closes[i] })).filter(p => p.close != null);
+  try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data })); } catch (e) {}
+  return data;
+}
+
 /* Yahoo Finance search — finds tickers by name or symbol */
 async function yahooSearch(q) {
   if (!q || q.trim().length < 2) return [];
@@ -1704,7 +2097,7 @@ function portfolioStats() {
 /* Primary routes (top nav + bottom tab). Aliases voor oude hash-namen. */
 const ROUTES = {
   portfolio:   { title: 'Portefeuille', render: renderPortfolio,    actions: () => '' },
-  performance: { title: 'Rendement',    render: renderProjection,   actions: () => '' },
+  performance: { title: 'Rendement',    render: renderPerformance,  actions: () => '' },
   dividend:    { title: 'Dividend',     render: renderDividends,    actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Toevoegen</button>` },
   calendar:    { title: 'Agenda',       render: renderCalendar,     actions: () => '' },
   actions:     { title: 'Mutaties',     render: renderTransactions, actions: () => `<button class="btn btn-primary" onclick="openTxModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe mutatie</button>` },
@@ -2597,42 +2990,73 @@ function renderPieChart() {
    RENDER: TRANSACTIONS
    ═══════════════════════════════════════════════════════════ */
 
+let _actFilter = { q: '', type: '', from: '', to: '' };
+function setActFilter(field, value) { _actFilter[field] = value; renderTransactions(); }
+
 function renderTransactions() {
   const c = document.getElementById('content');
-  const tx = pfTransactions().slice().sort((a, b) => b.date.localeCompare(a.date));
+  const allTx = pfTransactions().slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const totalDeposits = allTx.filter(t => t.type === 'storting').reduce((s, t) => s + ((+t.amount || 0) * (+t.fx || 1)), 0);
+  /* Apply filters */
+  const tx = allTx.filter(t => {
+    if (_actFilter.type && t.type !== _actFilter.type) return false;
+    if (_actFilter.from && (t.date || '') < _actFilter.from) return false;
+    if (_actFilter.to && (t.date || '') > _actFilter.to) return false;
+    if (_actFilter.q) {
+      const q = _actFilter.q.toLowerCase();
+      const tk = getTicker(t.ticker);
+      const haystack = (t.ticker || '') + ' ' + (tk?.name || '') + ' ' + (t.note || '');
+      if (!haystack.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
   c.innerHTML = `
-    <div class="filter-bar">
-      <input class="input" id="txFilter" placeholder="Zoek ticker..." oninput="filterTxTable(this.value)">
-      <select class="select" id="txTypeFilter" onchange="filterTxType(this.value)">
-        <option value="">Alle types</option>
-        <option value="koop">Koop</option>
-        <option value="verkoop">Verkoop</option>
-        <option value="dividend">Dividend</option>
-        <option value="storting">Storting</option>
-        <option value="opname">Opname</option>
+    <div class="act-hero">
+      <div class="act-hero-text">
+        <div class="act-hero-title">Mutaties</div>
+        <div class="act-hero-sub">Inleg via broker: ${fmtEUR(totalDeposits)}</div>
+      </div>
+      <div class="act-hero-icon">💸</div>
+    </div>
+    <div class="act-filters">
+      <input class="input" placeholder="Zoek ticker, naam, notitie..." value="${escapeHtml(_actFilter.q)}" oninput="setActFilter('q', this.value)">
+      <select class="select" onchange="setActFilter('type', this.value)">
+        <option value="">Alle mutaties</option>
+        <option value="koop" ${_actFilter.type === 'koop' ? 'selected' : ''}>Koop</option>
+        <option value="verkoop" ${_actFilter.type === 'verkoop' ? 'selected' : ''}>Verkoop</option>
+        <option value="dividend" ${_actFilter.type === 'dividend' ? 'selected' : ''}>Dividend</option>
+        <option value="storting" ${_actFilter.type === 'storting' ? 'selected' : ''}>Storting</option>
+        <option value="opname" ${_actFilter.type === 'opname' ? 'selected' : ''}>Opname</option>
       </select>
+      <div class="act-date-range">
+        <input type="date" value="${_actFilter.from}" onchange="setActFilter('from', this.value)" title="Van">
+        <span class="act-date-range-sep">–</span>
+        <input type="date" value="${_actFilter.to}" onchange="setActFilter('to', this.value)" title="Tot">
+      </div>
       <span class="spacer"></span>
-      <span class="text-muted text-mono" style="font-size:12px;">${tx.length} transacties</span>
+      <span class="text-muted text-mono" style="font-size:12px;">${tx.length} / ${allTx.length}</span>
     </div>
     <div class="tbl-wrap">
-      ${tx.length === 0 ? `<div class="empty"><div class="empty-title">Geen transacties</div><div class="empty-msg">Klik op "Nieuwe transactie" of importeer een CSV.</div></div>` : `
+      ${tx.length === 0 ? `<div class="empty"><div class="empty-title">Geen mutaties</div><div class="empty-msg">Klik op "Nieuwe mutatie" of importeer een CSV.</div></div>` : `
       <table class="tbl" id="txTable">
-        <thead><tr><th>Datum</th><th>Type</th><th>Ticker</th><th class="num">Aantal</th><th class="num">Prijs</th><th class="num">Kosten</th><th class="num">Totaal (EUR)</th><th></th></tr></thead>
+        <thead><tr><th>Datum</th><th>Type</th><th>Effect</th><th class="num">Aantal</th><th class="num">Prijs</th><th class="num">Kosten</th><th class="num">Totaal (EUR)</th><th></th></tr></thead>
         <tbody>${tx.map(t => {
           const isCash = t.type === 'storting' || t.type === 'opname';
           const totalEur = isCash
-            ? (+t.amount || 0) * (+t.fx || 1) * (t.type === 'opname' ? -1 : 1)
+            ? (+t.amount || 0) * (+t.fx || 1)
             : ((+t.qty || 0) * (+t.price || 0) + (t.type === 'koop' ? (+t.fee || 0) : -(+t.fee || 0))) * (+t.fx || 1);
-          const totalClass = (t.type === 'verkoop' || t.type === 'storting') ? 'pos' : (t.type === 'opname' ? 'neg' : '');
+          const totalClass = (t.type === 'verkoop' || t.type === 'storting' || t.type === 'dividend') ? 'pos' : (t.type === 'opname' || t.type === 'koop') ? 'neg' : '';
+          const sign = (t.type === 'koop' || t.type === 'opname') ? '-' : '+';
+          const tk = !isCash ? getTicker(t.ticker) : null;
           return `
           <tr data-ticker="${escapeHtml(t.ticker || '')}" data-type="${t.type}">
             <td>${fmtDate(t.date)}</td>
             <td><span class="type-pill type-${t.type}">${t.type}</span></td>
-            <td class="ticker-cell">${isCash ? '<span class="text-muted">cash</span>' : escapeHtml(t.ticker)}</td>
+            <td>${isCash ? '<span class="text-muted">cash</span>' : `<div class="sec-row-brand">${brandLogoHTML(tk || { symbol: t.ticker })}<div class="sec-name"><span class="sec-name-primary">${escapeHtml(tk?.name || t.ticker)}</span><span class="sec-name-secondary">${escapeHtml(t.ticker)}</span></div></div>`}</td>
             <td class="num">${isCash ? '—' : fmtNum(t.qty, 4)}</td>
             <td class="num">${isCash ? fmtNum(t.amount || 0, 2) + ' ' + escapeHtml(t.currency || '') : fmtNum(t.price, 2) + ' ' + escapeHtml(t.currency || '')}</td>
-            <td class="num">${fmtNum(t.fee || 0, 2)}</td>
-            <td class="num ${totalClass}">${fmtEUR(Math.abs(totalEur)) }${t.type === 'opname' ? ' uit' : ''}</td>
+            <td class="num">${t.fee ? fmtNum(t.fee, 2) : '—'}</td>
+            <td class="num ${totalClass}">${sign}${fmtEUR(Math.abs(totalEur))}</td>
             <td><button class="btn btn-ghost btn-sm" onclick="openTxModal('${t.id}')">Bewerk</button></td>
           </tr>`;}).join('')}
         </tbody>
@@ -2640,16 +3064,6 @@ function renderTransactions() {
     </div>
   `;
 }
-function filterTxTable(q) {
-  q = (q || '').toLowerCase();
-  document.querySelectorAll('#txTable tbody tr').forEach(tr => {
-    const match = !q || tr.dataset.ticker.toLowerCase().includes(q);
-    const typeF = document.getElementById('txTypeFilter').value;
-    const typeMatch = !typeF || tr.dataset.type === typeF;
-    tr.style.display = (match && typeMatch) ? '' : 'none';
-  });
-}
-function filterTxType(v) { filterTxTable(document.getElementById('txFilter').value); }
 
 /* ═══════════════════════════════════════════════════════════
    RENDER: DIVIDENDS
@@ -2753,51 +3167,156 @@ function renderHoldings() {
    RENDER: CALENDAR
    ═══════════════════════════════════════════════════════════ */
 
+const CAL_EVENT_TYPES = [
+  { key: 'exdiv',    label: 'Ex-dividend',      shortLabel: 'Ex-dividend',     cls: 'type-verkoop',  field: 'exDate' },
+  { key: 'pay',      label: 'Dividend',         shortLabel: 'Dividend',        cls: 'type-dividend', field: 'payDate' },
+  { key: 'earnings', label: 'Earnings',         shortLabel: 'Earnings',        cls: 'type-earnings', field: 'earnDate' },
+  { key: 'cmd',      label: 'Capital Markets Day', shortLabel: 'CMD',          cls: 'type-cmd',      field: 'cmdDate' },
+  { key: 'agm',      label: 'Aandeelhoudersvergadering', shortLabel: 'AGM',    cls: 'type-agm',      field: 'agmDate' },
+];
+
+let _calView = 'month'; /* 'week' or 'month' */
+let _calRef = new Date(); _calRef.setHours(0, 0, 0, 0);
+let _calEventsEnabled = new Set(CAL_EVENT_TYPES.map(t => t.key));
+
+function calShift(delta) {
+  if (_calView === 'week') _calRef.setDate(_calRef.getDate() + delta * 7);
+  else _calRef.setMonth(_calRef.getMonth() + delta);
+  renderCalendar();
+}
+function calToday() { _calRef = new Date(); _calRef.setHours(0, 0, 0, 0); renderCalendar(); }
+function setCalView(v) { _calView = v; renderCalendar(); }
+function toggleCalEvent(key) {
+  if (_calEventsEnabled.has(key)) _calEventsEnabled.delete(key); else _calEventsEnabled.add(key);
+  renderCalendar();
+}
+function openCalFilterSheet() {
+  document.getElementById('calFilterSheet').classList.add('open');
+  document.getElementById('calFilterBody').innerHTML = CAL_EVENT_TYPES.map(t => `
+    <div class="col-pick-item ${_calEventsEnabled.has(t.key) ? 'checked' : ''}" data-evt="${t.key}" onclick="this.classList.toggle('checked')">
+      <span class="col-pick-cb"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 8l3 3 7-7"/></svg></span>
+      <span class="col-pick-label">${escapeHtml(t.label)}</span>
+    </div>
+  `).join('');
+}
+function closeCalFilterSheet() { document.getElementById('calFilterSheet').classList.remove('open'); }
+function resetCalFilterSheet() {
+  document.querySelectorAll('#calFilterBody .col-pick-item').forEach(el => el.classList.add('checked'));
+}
+function saveCalFilterSheet() {
+  _calEventsEnabled = new Set([...document.querySelectorAll('#calFilterBody .col-pick-item.checked')].map(el => el.dataset.evt));
+  if (!_calEventsEnabled.size) { appToast('Selecteer minstens 1 event-type', { type: 'warn' }); return; }
+  closeCalFilterSheet();
+  renderCalendar();
+}
+
+function isoWeekNum(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil((((t - yearStart) / 86400000) + 1) / 7);
+}
+
 function renderCalendar() {
   const c = document.getElementById('content');
-  const today = new Date(); today.setHours(0,0,0,0);
+  /* Determine range */
+  let rangeStart, rangeEnd, periodLabel;
+  if (_calView === 'week') {
+    const d = new Date(_calRef);
+    const dow = (d.getDay() + 6) % 7; /* monday=0 */
+    d.setDate(d.getDate() - dow);
+    rangeStart = new Date(d);
+    rangeEnd = new Date(d); rangeEnd.setDate(rangeEnd.getDate() + 7);
+    periodLabel = `W${isoWeekNum(rangeStart)}, ${rangeStart.getFullYear()}`;
+  } else {
+    rangeStart = new Date(_calRef.getFullYear(), _calRef.getMonth(), 1);
+    rangeEnd = new Date(_calRef.getFullYear(), _calRef.getMonth() + 1, 1);
+    periodLabel = rangeStart.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' }).replace(/^\w/, ch => ch.toUpperCase());
+  }
   const heldTickers = new Set(computeHoldings().map(h => h.ticker));
-  const upcoming = [];
   const holdings = computeHoldings();
+  const events = [];
   rawState.tickers.forEach(t => {
     if (!heldTickers.has(t.symbol)) return;
     const holding = holdings.find(h => h.ticker === t.symbol);
     const qty = holding?.qty || 0;
     const divAmount = (t.dps || 0) * qty / (t.freq || 4);
-    const push = (date, kind, kindClass, amount) => {
+    CAL_EVENT_TYPES.forEach(et => {
+      if (!_calEventsEnabled.has(et.key)) return;
+      const date = t[et.field];
       if (!date) return;
-      if (new Date(date) < today) return;
-      upcoming.push({ date, kind, kindClass, ticker: t.symbol, amount, currency: t.currency });
-    };
-    push(t.exDate, 'Ex-div', 'type-verkoop', divAmount);
-    push(t.payDate, 'Payment', 'type-dividend', divAmount);
-    push(t.earnDate, 'Earnings', 'type-earnings', 0);
-    push(t.cmdDate, 'CMD', 'type-cmd', 0);
-    push(t.agmDate, 'AGM', 'type-agm', 0);
+      const d = new Date(date);
+      if (d < rangeStart || d >= rangeEnd) return;
+      const amount = (et.key === 'exdiv' || et.key === 'pay') ? divAmount : 0;
+      events.push({ date, dt: d, type: et, ticker: t, amount });
+    });
   });
-  upcoming.sort((a, b) => a.date.localeCompare(b.date));
+  events.sort((a, b) => a.date.localeCompare(b.date));
+  /* Group by week */
+  const weeks = new Map();
+  events.forEach(e => {
+    const wk = isoWeekNum(e.dt);
+    if (!weeks.has(wk)) weeks.set(wk, []);
+    weeks.get(wk).push(e);
+  });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const isToday = (d) => d.getTime() === today.getTime();
+  /* Render */
   c.innerHTML = `
-    <div class="card">
-      <div class="card-header"><div class="card-title">Komende dividend-events</div>
-        <div class="text-muted text-mono" style="font-size:12px;">${upcoming.length} events</div>
+    <div class="cal-toolbar">
+      <div class="cal-period-row">
+        <div class="cal-period-title">${escapeHtml(periodLabel)} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
       </div>
-      ${upcoming.length === 0 ? `<div class="empty"><div class="empty-title">Geen komende dividenden</div><div class="empty-msg">Vul ex-div en payment-data in bij je tickers (klik op een ticker).</div></div>` : `
-      <div class="cal-list">
-        ${upcoming.map(u => {
-          const d = new Date(u.date);
-          return `<div class="cal-item">
-            <div class="cal-date">
-              <div class="cal-date-day">${d.getDate()}</div>
-              <div class="cal-date-month">${d.toLocaleDateString('nl-NL', { month: 'short' })} ${d.getFullYear()}</div>
+      <button class="cal-events-btn" onclick="openCalFilterSheet()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        Events
+      </button>
+    </div>
+    <div class="cal-toolbar">
+      <div class="cal-view-toggle">
+        <button class="${_calView === 'week' ? 'active' : ''}" onclick="setCalView('week')">Week</button>
+        <button class="${_calView === 'month' ? 'active' : ''}" onclick="setCalView('month')">Maand</button>
+      </div>
+      <div style="flex:1;"></div>
+      <button class="btn btn-sm" onclick="calToday()">Vandaag</button>
+      <div class="cal-nav">
+        <button onclick="calShift(-1)" aria-label="Vorige"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button onclick="calShift(1)" aria-label="Volgende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+    ${events.length === 0 ? `<div class="card"><div class="empty">
+      <div class="empty-title">Geen events in deze periode</div>
+      <div class="empty-msg">Voeg ex-dividend / earnings / AGM datums toe via de ticker-modal (klik een ticker in Portefeuille).</div>
+    </div></div>` : ''}
+    <div>
+      ${[...weeks.entries()].sort((a, b) => a[0] - b[0]).map(([wk, items]) => {
+        const first = items[0].dt;
+        const last = items[items.length - 1].dt;
+        const rangeStr = first.toDateString() === last.toDateString() ?
+          first.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) :
+          `${first.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} – ${last.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}`;
+        return `<div class="cal-week-group">
+          <div class="cal-week-head">
+            <span>${rangeStr}</span>
+            <span class="cal-week-num">W${wk}</span>
+          </div>
+          ${items.map(e => `
+            <div class="cal-day-row ${isToday(e.dt) ? 'today' : ''}">
+              <div class="cal-day-label">
+                <div class="cal-day-label-num">${e.dt.getDate()}</div>
+                <div>${e.dt.toLocaleDateString('nl-NL', { weekday: 'short' })}</div>
+              </div>
+              ${brandLogoHTML(e.ticker)}
+              <div class="cal-day-name">${escapeHtml(e.ticker.name || e.ticker.symbol)}<div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">${escapeHtml(e.ticker.symbol)}</div></div>
+              <div class="cal-day-ev-type" style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                <span class="type-pill ${e.type.cls}">${e.type.shortLabel}</span>
+                ${e.amount > 0 ? `<span class="text-mono" style="font-size:11px; color:var(--success);">≈ ${fmtNum(e.amount, 2)} ${escapeHtml(e.ticker.currency || '')}</span>` : ''}
+              </div>
             </div>
-            <div>
-              <div class="cal-info-ticker">${escapeHtml(u.ticker)} <span class="type-pill ${u.kindClass}" style="margin-left:6px;">${u.kind}</span></div>
-              <div class="cal-info-sub">${fmtDate(u.date)}</div>
-            </div>
-            <div class="cal-amount">${u.amount > 0 ? '≈ ' + fmtNum(u.amount, 2) + ' ' + (u.currency || '') : ''}</div>
-          </div>`;
-        }).join('')}
-      </div>`}
+          `).join('')}
+        </div>`;
+      }).join('')}
     </div>
   `;
 }
