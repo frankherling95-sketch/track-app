@@ -227,6 +227,45 @@ button { font-family:inherit; }
 .col-pick-item.checked .col-pick-cb svg { opacity:1; }
 .col-pick-label { font-size:14px; color:var(--text); }
 
+/* ─────────── Batch: Timetravel + strategieën + meer ─────────── */
+.tt-badge {
+  display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
+  background:var(--gold); color:var(--navy); border-radius:14px;
+  font-size:11px; font-weight:700; font-family:var(--font-mono);
+  cursor:pointer;
+}
+.tt-badge:hover { filter:brightness(1.05); }
+.tt-badge svg { width:11px; height:11px; }
+
+.tt-input-wrap { position:relative; }
+.tt-input {
+  background:var(--surface); border:1px solid var(--border-strong); color:var(--text);
+  padding:6px 10px; border-radius:8px; font-family:var(--font-mono); font-size:12px;
+  cursor:pointer;
+}
+
+.sec-total-row td { background:var(--surface2); font-weight:700; font-family:var(--font-mono); border-top:2px solid var(--border-strong); }
+
+.closed-toggle {
+  display:flex; align-items:center; gap:8px; padding:14px 16px; cursor:pointer;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  font-size:14px; font-weight:600; margin-top:14px;
+}
+.closed-toggle:hover { background:var(--surface2); }
+.closed-toggle svg { width:14px; height:14px; transition:transform .2s; }
+.closed-toggle.open svg { transform:rotate(90deg); }
+.closed-toggle-count { color:var(--text-muted); font-weight:500; margin-left:auto; font-family:var(--font-mono); font-size:12px; }
+
+.strat-list { display:flex; flex-direction:column; gap:8px; }
+.strat-row { display:grid; grid-template-columns:auto 1fr auto auto; gap:12px; align-items:center; padding:10px; background:var(--surface2); border-radius:8px; }
+.strat-color-dot { width:24px; height:24px; border-radius:6px; flex-shrink:0; }
+.strat-info-name { font-weight:600; font-size:14px; }
+.strat-info-target { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); }
+
+.dt-toggle { display:inline-flex; background:var(--surface2); border-radius:8px; padding:3px; }
+.dt-toggle button { background:transparent; border:none; padding:6px 12px; border-radius:6px; font-family:inherit; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; }
+.dt-toggle button.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow-sm); }
+
 /* ─────────── Fase 3: Rendement ─────────── */
 .perf-subtabs { display:flex; gap:4px; margin-bottom:14px; border-bottom:1px solid var(--border); }
 .perf-subtab { background:transparent; border:none; padding:10px 14px; cursor:pointer; font-family:inherit; font-size:14px; font-weight:600; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px; }
@@ -388,6 +427,11 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 .type-dividend { background:var(--mint-soft); color:var(--success); }
 .type-storting { background:rgba(91,184,245,.14); color:var(--sky); }
 .type-opname { background:rgba(245,194,91,.14); color:var(--gold); }
+.type-broker_fee { background:rgba(233,106,106,.10); color:var(--danger); }
+.type-stamp_duty { background:rgba(233,106,106,.10); color:var(--danger); }
+.type-securities_lending { background:rgba(0,229,176,.10); color:var(--success); }
+.type-dividend_correction { background:rgba(245,194,91,.14); color:var(--gold); }
+.type-currency_conversion { background:rgba(155,123,255,.14); color:#9B7BFF; }
 .type-earnings { background:rgba(155,123,255,.14); color:#9B7BFF; }
 .type-cmd { background:rgba(91,184,245,.14); color:var(--sky); }
 .type-agm { background:rgba(216,91,184,.14); color:#D85BB8; }
@@ -555,6 +599,10 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
     </nav>
     <div class="tn-right">
       <select class="tn-pf-select" id="pfSelect" onchange="switchPortfolio(this.value)" title="Portefeuille"></select>
+      <button class="tt-input" id="ttBtn" onclick="openTtModal()" title="Timetravel — bekijk portfolio op een andere datum">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span id="ttBtnLabel">Vandaag</span>
+      </button>
       <button class="value-pill" id="valuePill" onclick="navigate('portfolio')" title="Vermogen + YTD">
         <span class="value-pill-val" id="valuePillVal">€ —</span>
         <span class="value-pill-ytd" id="valuePillYtd">YTD —</span>
@@ -658,6 +706,11 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
           <option value="dividend">Dividend</option>
           <option value="storting">Storting (cash in)</option>
           <option value="opname">Opname (cash out)</option>
+          <option value="broker_fee">Broker fee</option>
+          <option value="stamp_duty">Stamp duty</option>
+          <option value="securities_lending">Securities lending (income)</option>
+          <option value="dividend_correction">Dividend correctie</option>
+          <option value="currency_conversion">Valutaconversie</option>
         </select>
       </div>
       <div><label>Datum</label><input class="input" type="date" id="txDate"></div>
@@ -768,6 +821,12 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
       <div><label>Earnings datum</label><input class="input" type="date" id="tkEarnDate"></div>
       <div><label>Capital Markets Day</label><input class="input" type="date" id="tkCmdDate"></div>
       <div><label>AGM (aandeelhoudersvergadering)</label><input class="input" type="date" id="tkAgmDate"></div>
+      <div><label>Strategie</label>
+        <select class="select" id="tkStrategy"><option value="">— Geen —</option></select>
+      </div>
+      <div><label>Broker</label><input class="input" id="tkBroker" placeholder="bv. DeGiro" list="brokerList"></div>
+      <div><label>Exchange</label><input class="input" id="tkExchange" placeholder="bv. NASDAQ" readonly title="Wordt gevuld vanuit Yahoo refresh"></div>
+      <div><label>Market cap (EUR)</label><input class="input" type="number" id="tkMarketCap" placeholder="Auto via Yahoo"></div>
       <div class="full">
         <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;cursor:pointer;">
           <input type="checkbox" id="tkAristocrat"> Dividend Aristocrat / King
@@ -873,6 +932,45 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   </div>
 </div>
 
+<datalist id="brokerList"></datalist>
+
+<!-- Strategy modal -->
+<div class="modal-bg" id="stratModal" onclick="if(event.target===this)closeStratModal()">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title" id="stratModalTitle">Strategie</div>
+      <button class="modal-close" onclick="closeStratModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-grid">
+      <div class="full"><label>Naam</label><input class="input" id="stratName" placeholder="bv. Dividend King"></div>
+      <div><label>Kleur</label><input class="input" type="color" id="stratColor" value="#00B57E" style="height:38px; padding:2px;"></div>
+      <div><label>Target allocatie (%)</label><input class="input" type="number" step="any" id="stratTarget" placeholder="0"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="stratDelete" onclick="deleteStrategy()">Verwijderen</button>
+      <button class="btn" onclick="closeStratModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveStrategy()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Timetravel popover -->
+<div class="modal-bg" id="ttModal" onclick="if(event.target===this)closeTtModal()">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">Timetravel</div>
+      <button class="modal-close" onclick="closeTtModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <p class="text-muted" style="font-size:13px; margin-top:0;">Bekijk de hele app alsof het een andere datum is. Holdings + cash + posities worden herberekend uit het transactielog.</p>
+    <div><label>Datum</label><input class="input" type="date" id="ttDateInput" max="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" onclick="setTimetravel(null);closeTtModal();" id="ttClearBtn">Reset</button>
+      <button class="btn" onclick="closeTtModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="applyTtModal()">Toepassen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Calendar filter bottom-sheet -->
 <div class="sheet-bg" id="calFilterSheet" onclick="if(event.target===this)closeCalFilterSheet()">
   <div class="sheet">
@@ -942,6 +1040,55 @@ let pendingSave = false;
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+/* ─────────── Timetravel — virtual "now" ─────────── */
+let _ttDate = null; /* ISO string when active, else null = real now */
+function getNowISO() { return _ttDate || new Date().toISOString().slice(0, 10); }
+function getNowDate() { return _ttDate ? new Date(_ttDate + 'T23:59:59') : new Date(); }
+function isTimetraveling() { return !!_ttDate; }
+function applyTimetravelFromUrl() {
+  const m = location.search.match(/[?&]timetravel=(\d{4}-\d{2}-\d{2})/);
+  _ttDate = m ? m[1] : null;
+}
+function setTimetravel(iso) {
+  _ttDate = iso || null;
+  const url = new URL(location.href);
+  if (iso) url.searchParams.set('timetravel', iso); else url.searchParams.delete('timetravel');
+  history.replaceState(null, '', url.toString());
+  renderAll();
+}
+
+/* Default strategieën */
+const DEFAULT_STRATEGIES = [
+  { id: 'garp',     name: 'GARP',     color: '#5BB8F5', targetPct: 0 },
+  { id: 'growth',   name: 'Growth',   color: '#9B7BFF', targetPct: 0 },
+  { id: 'value',    name: 'Value',    color: '#F5C25B', targetPct: 0 },
+  { id: 'dividend', name: 'Dividend', color: '#00B57E', targetPct: 0 },
+];
+
+/* Country → Continent (Nederlands) */
+const COUNTRY_TO_CONTINENT = {
+  US:'Noord-Amerika', CA:'Noord-Amerika', MX:'Noord-Amerika',
+  NL:'Europa', DE:'Europa', FR:'Europa', GB:'Europa', UK:'Europa', CH:'Europa', BE:'Europa', LU:'Europa',
+  ES:'Europa', IT:'Europa', SE:'Europa', NO:'Europa', DK:'Europa', FI:'Europa', AT:'Europa', PL:'Europa',
+  IE:'Europa', PT:'Europa', GR:'Europa', CZ:'Europa',
+  JP:'Azië', CN:'Azië', HK:'Azië', TW:'Azië', KR:'Azië', SG:'Azië', IN:'Azië', TH:'Azië', ID:'Azië', VN:'Azië',
+  AU:'Oceanië', NZ:'Oceanië',
+  BR:'Zuid-Amerika', AR:'Zuid-Amerika', CL:'Zuid-Amerika', CO:'Zuid-Amerika',
+  ZA:'Afrika', NG:'Afrika', EG:'Afrika', MA:'Afrika',
+  AE:'Midden-Oosten', SA:'Midden-Oosten', IL:'Midden-Oosten', TR:'Midden-Oosten',
+};
+function countryToContinent(c) { return COUNTRY_TO_CONTINENT[(c || '').toUpperCase()] || 'Onbekend'; }
+
+/* Market cap → bucket */
+function marketCapBucket(mc) {
+  if (!mc || mc <= 0) return 'Onbekend';
+  if (mc >= 200e9) return 'Mega cap (> €200B)';
+  if (mc >= 10e9)  return 'Large cap (€10–200B)';
+  if (mc >= 2e9)   return 'Mid cap (€2–10B)';
+  if (mc >= 300e6) return 'Small cap (€300M–2B)';
+  return 'Micro cap (< €300M)';
+}
+
 function initState() {
   const backup = localStorage.getItem(LS_BACKUP_KEY);
   if (backup) {
@@ -958,6 +1105,7 @@ function initState() {
   if (!rawState.transactions) rawState.transactions = [];
   if (!rawState.dividends) rawState.dividends = [];
   if (!rawState.tickers) rawState.tickers = [];
+  if (!rawState.strategies) rawState.strategies = DEFAULT_STRATEGIES.slice();
   if (!rawState.settings) rawState.settings = { theme: 'auto', baseCurrency: 'EUR' };
   if (!rawState.settings.baseCurrency) rawState.settings.baseCurrency = 'EUR';
   if (!rawState.settings.theme) rawState.settings.theme = 'auto';
@@ -1080,15 +1228,19 @@ function getTicker(symbol) {
 function ensureTicker(symbol) {
   let t = getTicker(symbol);
   if (!t) {
-    t = { id: uid(), symbol: symbol.toUpperCase(), name: '', type: 'stock', sector: '', industry: '', country: '', currency: 'EUR', price: null, dps: null, freq: 4, exDate: null, payDate: null, earnDate: null, cmdDate: null, agmDate: null, aristocrat: false };
+    t = { id: uid(), symbol: symbol.toUpperCase(), name: '', type: 'stock', sector: '', industry: '', country: '', currency: 'EUR', price: null, dps: null, freq: 4, exDate: null, payDate: null, earnDate: null, cmdDate: null, agmDate: null, aristocrat: false, marketCap: null, exchange: '', broker: '', strategyId: '' };
     rawState.tickers.push(t);
   } else {
-    /* migrate older records to new shape */
+    /* migrate older records */
     if (!t.type) t.type = 'stock';
     if (t.industry === undefined) t.industry = '';
     if (t.earnDate === undefined) t.earnDate = null;
     if (t.cmdDate === undefined) t.cmdDate = null;
     if (t.agmDate === undefined) t.agmDate = null;
+    if (t.marketCap === undefined) t.marketCap = null;
+    if (t.exchange === undefined) t.exchange = '';
+    if (t.broker === undefined) t.broker = '';
+    if (t.strategyId === undefined) t.strategyId = '';
   }
   return t;
 }
@@ -1107,10 +1259,11 @@ function fxForCurrency(currency) {
   return latest || 1;
 }
 
-/* Compute current holdings from transactions */
+/* Compute current holdings from transactions. Respects timetravel cutoff. */
 function computeHoldings() {
+  const cutoff = getNowISO();
   const map = new Map();
-  pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(tx => {
+  pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).filter(t => (t.date || '') <= cutoff).forEach(tx => {
     const k = (tx.ticker || '').toUpperCase();
     if (!k || tx.type === 'dividend' || tx.type === 'storting' || tx.type === 'opname') return;
     if (!map.has(k)) map.set(k, { ticker: k, qty: 0, costEur: 0, realizedEur: 0 });
@@ -1132,18 +1285,44 @@ function computeHoldings() {
   return [...map.values()].filter(h => Math.abs(h.qty) > 0.000001);
 }
 
-/* Cash balance: stortingen - opnamen - koop totalen + verkoop netto + ontvangen dividenden */
+/* Closed holdings — tickers waar qty op 0 staat maar wel realized P&L is. */
+function computeClosedHoldings() {
+  const cutoff = getNowISO();
+  const map = new Map();
+  pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).filter(t => (t.date || '') <= cutoff).forEach(tx => {
+    const k = (tx.ticker || '').toUpperCase();
+    if (!k || tx.type === 'dividend' || tx.type === 'storting' || tx.type === 'opname') return;
+    if (!map.has(k)) map.set(k, { ticker: k, qty: 0, costEur: 0, realizedEur: 0, exitDate: null });
+    const h = map.get(k);
+    const qty = +tx.qty || 0, price = +tx.price || 0, fee = +tx.fee || 0, fx = +tx.fx || 1;
+    if (tx.type === 'koop') { h.qty += qty; h.costEur += (qty * price + fee) * fx; }
+    else if (tx.type === 'verkoop') {
+      const avg = h.qty > 0 ? h.costEur / h.qty : 0;
+      h.realizedEur += (qty * price - fee) * fx - qty * avg;
+      h.costEur -= avg * qty;
+      h.qty -= qty;
+      h.exitDate = tx.date;
+    }
+  });
+  return [...map.values()].filter(h => Math.abs(h.qty) < 0.000001 && Math.abs(h.realizedEur) > 0.01);
+}
+
+/* Cash balance — respects timetravel */
 function computeCash() {
+  const cutoff = getNowISO();
   let cash = 0;
-  pfTransactions().forEach(tx => {
+  pfTransactions().filter(t => (t.date || '') <= cutoff).forEach(tx => {
     const fx = +tx.fx || 1;
     const fee = +tx.fee || 0;
     if (tx.type === 'storting') cash += (+tx.amount || 0) * fx;
     else if (tx.type === 'opname') cash -= (+tx.amount || 0) * fx;
     else if (tx.type === 'koop') cash -= ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
     else if (tx.type === 'verkoop') cash += ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx;
+    else if (tx.type === 'broker_fee' || tx.type === 'stamp_duty') cash -= ((+tx.amount || 0) + fee) * fx;
+    else if (tx.type === 'securities_lending') cash += (+tx.amount || 0) * fx;
+    else if (tx.type === 'dividend_correction') cash -= (+tx.amount || 0) * fx;
   });
-  pfDividends().forEach(d => cash += ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)));
+  pfDividends().filter(d => (d.date || '') <= cutoff).forEach(d => cash += ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)));
   return cash;
 }
 
@@ -1380,11 +1559,16 @@ function brandLogoHTML(ticker) {
    ═══════════════════════════════════════════════════════════ */
 
 const PORT_BREAKDOWNS = [
-  { key: 'sector',   label: 'Sector',   getter: tk => tk?.sector || 'Onbekend' },
-  { key: 'industry', label: 'Branche',  getter: tk => tk?.industry || 'Onbekend' },
-  { key: 'type',     label: 'Type',     getter: tk => { const m = { stock:'Aandeel', etf:'ETF', bond:'Obligatie', fund:'Fonds', crypto:'Crypto', metal:'Edelmetaal', reit:'REIT', other:'Overig' }; return m[tk?.type || 'stock'] || 'Aandeel'; } },
-  { key: 'country',  label: 'Land',     getter: tk => tk?.country || 'Onbekend' },
-  { key: 'currency', label: 'Valuta',   getter: tk => tk?.currency || 'EUR' },
+  { key: 'sector',    label: 'Sector',     getter: tk => tk?.sector || 'Onbekend' },
+  { key: 'industry',  label: 'Branche',    getter: tk => tk?.industry || 'Onbekend' },
+  { key: 'marketcap', label: 'Market cap', getter: tk => marketCapBucket(tk?.marketCap) },
+  { key: 'continent', label: 'Continent',  getter: tk => countryToContinent(tk?.country) },
+  { key: 'country',   label: 'Land',       getter: tk => tk?.country || 'Onbekend' },
+  { key: 'currency',  label: 'Valuta',     getter: tk => tk?.currency || 'EUR' },
+  { key: 'exchange',  label: 'Exchange',   getter: tk => tk?.exchange || 'Onbekend' },
+  { key: 'type',      label: 'Type',       getter: tk => { const m = { stock:'Aandeel', etf:'ETF', bond:'Obligatie', fund:'Fonds', crypto:'Crypto', metal:'Edelmetaal', reit:'REIT', other:'Overig' }; return m[tk?.type || 'stock'] || 'Aandeel'; } },
+  { key: 'strategy',  label: 'Strategie',  getter: tk => { const s = rawState.strategies?.find(s => s.id === tk?.strategyId); return s ? s.name : 'Geen strategie'; } },
+  { key: 'broker',    label: 'Broker',     getter: tk => tk?.broker || 'Onbekend' },
 ];
 
 let _portBreakdown = 'sector';
@@ -1539,15 +1723,19 @@ function renderPortBreakdownDonutAndLegend() {
   }).join('');
 }
 
+let _showClosed = false;
+function toggleClosed() { _showClosed = !_showClosed; renderSecTable(); }
+
 function renderSecTable() {
   const wrap = document.getElementById('secTblWrap');
   if (!wrap) return;
   const cols = getPortColumns().map(k => SEC_COLUMNS.find(c => c.key === k)).filter(Boolean);
   const holdings = computeHoldings();
-  if (!holdings.length) {
+  const closed = computeClosedHoldings();
+  if (!holdings.length && !closed.length) {
     wrap.innerHTML = `<div class="empty" style="padding:30px;">
       <div class="empty-title">Geen posities</div>
-      <div class="empty-msg">Voeg een koop-actie toe via de Actions-tab.</div>
+      <div class="empty-msg">Voeg een koop-actie toe via de Mutaties-tab.</div>
     </div>`;
     return;
   }
@@ -1590,7 +1778,38 @@ function renderSecTable() {
       return _portSort.dir === 'desc' ? nb.localeCompare(na) : na.localeCompare(nb);
     });
   }
-  wrap.innerHTML = `<table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  /* Total row */
+  const totals = cols.map(c => {
+    if (!c.num) return '<td></td>';
+    if (['unrealPLPct', 'totalPLPct', 'yoc', 'avgPrice', 'currentPrice', 'holdingPeriod', 'shares'].includes(c.key)) return '<td></td>';
+    const sum = sorted.reduce((s, h) => { const v = c.get(h, getTicker(h.ticker)); return s + (typeof v === 'number' ? v : 0); }, 0);
+    const cls = c.color ? (sum > 0 ? 'pos' : sum < 0 ? 'neg' : '') : '';
+    return `<td class="num ${cls}">${c.fmt(sum, null, null)}</td>`;
+  }).join('');
+  const totalRow = `<tr class="sec-total-row"><td><strong>Totaal</strong></td>${totals}</tr>`;
+  let html = `<table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}${totalRow}</tbody></table>`;
+  /* Closed positions accordion */
+  if (closed.length) {
+    const positiveCount = closed.filter(h => (h.realizedEur || 0) > 0).length;
+    const totalRealized = closed.reduce((s, h) => s + (h.realizedEur || 0), 0);
+    html += `<div class="closed-toggle ${_showClosed ? 'open' : ''}" onclick="toggleClosed()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+      <strong>Gesloten posities</strong>
+      <span class="closed-toggle-count">${positiveCount}/${closed.length} positief · ${totalRealized >= 0 ? '+' : ''}${fmtEUR(totalRealized)}</span>
+    </div>`;
+    if (_showClosed) {
+      const closedSorted = closed.slice().sort((a, b) => (b.exitDate || '').localeCompare(a.exitDate || ''));
+      html += `<div class="tbl-wrap" style="margin-top:8px;"><table class="tbl"><thead><tr>
+        <th>Effect</th><th class="num">Gerealiseerd resultaat</th><th>Verkocht op</th>
+      </tr></thead><tbody>${closedSorted.map(h => {
+        const tk = getTicker(h.ticker);
+        return `<tr><td><div class="sec-row-brand">${brandLogoHTML(tk || { symbol: h.ticker })}<div class="sec-name"><span class="sec-name-primary">${escapeHtml(tk?.name || h.ticker)}</span><span class="sec-name-secondary">${escapeHtml(h.ticker)}</span></div></div></td>
+        <td class="num ${h.realizedEur >= 0 ? 'pos' : 'neg'}">${h.realizedEur >= 0 ? '+' : ''}${fmtEUR(h.realizedEur)}</td>
+        <td>${fmtDate(h.exitDate)}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    }
+  }
+  wrap.innerHTML = html;
 }
 
 /* Column picker bottom sheet */
@@ -1955,11 +2174,13 @@ async function fetchYahooFullData(symbol) {
   return {
     price: meta.regularMarketPrice ?? null,
     currency: meta.currency || null,
-    exchange: meta.exchangeName || null,
+    exchange: meta.exchangeName || meta.fullExchangeName || null,
+    exchangeCode: meta.exchange || null,
     name: meta.longName || meta.shortName || null,
     dps: dpsAnnual > 0 ? dpsAnnual : null,
     lastExDate: lastDiv ? new Date(lastDiv.date * 1000).toISOString().slice(0, 10) : null,
     divCount: last12.length,
+    marketCap: meta.marketCap || null,
     freq
   };
 }
@@ -1979,6 +2200,8 @@ async function refreshTicker(symbolOrTicker) {
   if (data.dps != null) t.dps = data.dps;
   if (data.lastExDate) t.exDate = data.lastExDate;
   if (data.freq) t.freq = data.freq;
+  if (data.marketCap != null) t.marketCap = data.marketCap;
+  if (data.exchange) t.exchange = data.exchange;
   t.lastFetchedAt = new Date().toISOString();
   return true;
 }
@@ -2144,6 +2367,7 @@ function renderAll() {
   def.render();
   renderPortfolioSelect();
   updateValuePill();
+  updateTtButton();
 }
 
 function updateValuePill() {
@@ -2165,6 +2389,74 @@ function updateValuePill() {
 
 function openSettingsMenu() { document.getElementById('settingsMenu').classList.add('open'); }
 function closeSettingsMenu() { document.getElementById('settingsMenu').classList.remove('open'); }
+
+/* Timetravel UI */
+function openTtModal() {
+  document.getElementById('ttDateInput').value = _ttDate || new Date().toISOString().slice(0, 10);
+  document.getElementById('ttClearBtn').classList.toggle('hidden', !_ttDate);
+  document.getElementById('ttModal').classList.add('open');
+}
+function closeTtModal() { document.getElementById('ttModal').classList.remove('open'); }
+function applyTtModal() {
+  const v = document.getElementById('ttDateInput').value;
+  setTimetravel(v || null);
+  closeTtModal();
+}
+function updateTtButton() {
+  const btn = document.getElementById('ttBtn');
+  const lbl = document.getElementById('ttBtnLabel');
+  if (!btn || !lbl) return;
+  if (_ttDate) {
+    lbl.textContent = fmtDate(_ttDate);
+    btn.style.background = 'var(--gold)';
+    btn.style.color = 'var(--navy)';
+    btn.style.borderColor = 'var(--gold)';
+    btn.style.fontWeight = '700';
+  } else {
+    lbl.textContent = 'Vandaag';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    btn.style.fontWeight = '';
+  }
+}
+
+/* Strategy CRUD */
+let _editingStratId = null;
+function openStratModal(id = null) {
+  _editingStratId = id;
+  const s = id ? rawState.strategies.find(x => x.id === id) : null;
+  document.getElementById('stratModalTitle').textContent = s ? 'Strategie bewerken' : 'Nieuwe strategie';
+  document.getElementById('stratName').value = s?.name || '';
+  document.getElementById('stratColor').value = s?.color || '#00B57E';
+  document.getElementById('stratTarget').value = s?.targetPct ?? '';
+  document.getElementById('stratDelete').classList.toggle('hidden', !s);
+  document.getElementById('stratModal').classList.add('open');
+  setTimeout(() => document.getElementById('stratName').focus(), 50);
+}
+function closeStratModal() { document.getElementById('stratModal').classList.remove('open'); _editingStratId = null; }
+function saveStrategy() {
+  const name = document.getElementById('stratName').value.trim();
+  if (!name) { appToast('Naam is verplicht', { type: 'error' }); return; }
+  const data = {
+    name,
+    color: document.getElementById('stratColor').value,
+    targetPct: parseFloat(document.getElementById('stratTarget').value) || 0
+  };
+  if (_editingStratId) {
+    Object.assign(rawState.strategies.find(s => s.id === _editingStratId), data);
+  } else {
+    rawState.strategies.push({ id: uid(), ...data });
+  }
+  scheduleSave(); closeStratModal(); renderAll();
+}
+function deleteStrategy() {
+  if (!_editingStratId) return;
+  if (!confirm('Strategie verwijderen? Tickers verliezen hun strategie-label.')) return;
+  rawState.tickers.forEach(t => { if (t.strategyId === _editingStratId) t.strategyId = ''; });
+  rawState.strategies = rawState.strategies.filter(s => s.id !== _editingStratId);
+  scheduleSave(); closeStratModal(); renderAll();
+}
 
 function renderPortfolioSelect() {
   const sel = document.getElementById('pfSelect');
@@ -2344,14 +2636,16 @@ async function prefillFromYahoo(symbol) {
 }
 function onTxTypeChange() {
   const t = document.getElementById('txType').value;
-  const isCash = (t === 'storting' || t === 'opname');
+  const cashTypes = ['storting', 'opname', 'broker_fee', 'stamp_duty', 'securities_lending', 'dividend_correction', 'currency_conversion'];
+  const isCash = cashTypes.includes(t);
   document.querySelectorAll('#txModal .tx-trade-only').forEach(el => el.classList.toggle('hidden', isCash));
   document.querySelectorAll('#txModal .tx-cash-only').forEach(el => el.classList.toggle('hidden', !isCash));
 }
 function closeTxModal() { document.getElementById('txModal').classList.remove('open'); editingTxId = null; }
 function saveTransaction() {
   const type = document.getElementById('txType').value;
-  const isCash = (type === 'storting' || type === 'opname');
+  const cashTypes = ['storting', 'opname', 'broker_fee', 'stamp_duty', 'securities_lending', 'dividend_correction', 'currency_conversion'];
+  const isCash = cashTypes.includes(type);
   const data = {
     type,
     date: document.getElementById('txDate').value || todayISO(),
@@ -2472,6 +2766,18 @@ function openTickerModal(id = null) {
   document.getElementById('tkCmdDate').value = t?.cmdDate || '';
   document.getElementById('tkAgmDate').value = t?.agmDate || '';
   document.getElementById('tkAristocrat').checked = !!t?.aristocrat;
+  /* Strategy dropdown */
+  const stratSel = document.getElementById('tkStrategy');
+  stratSel.innerHTML = '<option value="">— Geen —</option>' + (rawState.strategies || []).map(s => `<option value="${s.id}" ${t?.strategyId === s.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+  document.getElementById('tkBroker').value = t?.broker || '';
+  document.getElementById('tkExchange').value = t?.exchange || '';
+  document.getElementById('tkMarketCap').value = t?.marketCap ?? '';
+  /* Broker datalist */
+  const brokerList = document.getElementById('brokerList');
+  if (brokerList) {
+    const brokers = [...new Set(rawState.tickers.map(x => x.broker).filter(Boolean))].sort();
+    brokerList.innerHTML = brokers.map(b => `<option value="${escapeHtml(b)}">`).join('');
+  }
   document.getElementById('tkDeleteBtn').classList.toggle('hidden', !t);
   document.getElementById('tickerModal').classList.add('open');
   setTimeout(() => document.getElementById('tkSymbol').focus(), 50);
@@ -2496,7 +2802,11 @@ function saveTicker() {
     earnDate: document.getElementById('tkEarnDate').value || null,
     cmdDate: document.getElementById('tkCmdDate').value || null,
     agmDate: document.getElementById('tkAgmDate').value || null,
-    aristocrat: document.getElementById('tkAristocrat').checked
+    aristocrat: document.getElementById('tkAristocrat').checked,
+    strategyId: document.getElementById('tkStrategy').value,
+    broker: document.getElementById('tkBroker').value.trim(),
+    exchange: document.getElementById('tkExchange').value.trim(),
+    marketCap: parseFloat(document.getElementById('tkMarketCap').value) || null
   };
   if (editingTkId) {
     Object.assign(rawState.tickers.find(t => t.id === editingTkId), data);
@@ -3069,35 +3379,201 @@ function renderTransactions() {
    RENDER: DIVIDENDS
    ═══════════════════════════════════════════════════════════ */
 
+let _divMode = 'received'; /* 'received' or 'padi' */
+let _divGrossNet = 'net';   /* 'gross' or 'net' */
+function setDivMode(m) { _divMode = m; renderDividends(); }
+function setDivGrossNet(m) { _divGrossNet = m; renderDividends(); }
+
 function renderDividends() {
   const c = document.getElementById('content');
   const dv = pfDividends().slice().sort((a, b) => b.date.localeCompare(a.date));
-  const total = dv.reduce((s, d) => s + ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)), 0);
+  const holdings = computeHoldings();
+  /* Totals */
+  const totalGross = dv.reduce((s, d) => s + ((+d.gross || 0) * (+d.fx || 1)), 0);
+  const totalNet = dv.reduce((s, d) => s + (((+d.gross || 0) - (+d.tax || 0)) * (+d.fx || 1)), 0);
+  const totalShown = _divGrossNet === 'gross' ? totalGross : totalNet;
+  /* Forward (PADI) */
+  let forwardDiv = 0;
+  holdings.forEach(h => { const tk = getTicker(h.ticker); const fx = tk ? fxForCurrency(tk.currency) : 1; if (tk?.dps) forwardDiv += h.qty * tk.dps * fx * (_divGrossNet === 'gross' ? 1 : 0.85); });
+  /* Per-security */
+  const perTicker = new Map();
+  dv.forEach(d => {
+    const k = d.ticker;
+    if (!perTicker.has(k)) perTicker.set(k, { ticker: k, gross: 0, net: 0, count: 0 });
+    const r = perTicker.get(k);
+    r.gross += (+d.gross || 0) * (+d.fx || 1);
+    r.net += ((+d.gross || 0) - (+d.tax || 0)) * (+d.fx || 1);
+    r.count++;
+  });
+  const perTickerArr = [...perTicker.values()].sort((a, b) => b.net - a.net);
+  const totalForPct = perTickerArr.reduce((s, r) => s + (_divGrossNet === 'gross' ? r.gross : r.net), 0);
+
   c.innerHTML = `
-    <div class="filter-bar">
-      <input class="input" id="divFilter" placeholder="Zoek ticker..." oninput="filterDivTable(this.value)">
-      <span class="spacer"></span>
-      <span class="text-muted text-mono" style="font-size:12px;">${dv.length} betalingen · ${fmtEUR(total)} netto</span>
+    <div class="dt-toggle" style="margin-bottom:14px;">
+      <button class="${_divMode === 'received' ? 'active' : ''}" onclick="setDivMode('received')">Ontvangen</button>
+      <button class="${_divMode === 'padi' ? 'active' : ''}" onclick="setDivMode('padi')">PADI (komend jaar)</button>
     </div>
-    <div class="tbl-wrap">
-      ${dv.length === 0 ? `<div class="empty"><div class="empty-title">Geen dividenden</div><div class="empty-msg">Voeg ontvangen dividenden toe of importeer ze via CSV.</div></div>` : `
-      <table class="tbl" id="divTable">
-        <thead><tr><th>Datum</th><th>Ticker</th><th class="num">Bruto</th><th class="num">Belasting</th><th class="num">Netto (EUR)</th><th>Valuta</th><th></th></tr></thead>
-        <tbody>${dv.map(d => `
-          <tr data-ticker="${escapeHtml(d.ticker)}">
-            <td>${fmtDate(d.date)}</td>
-            <td class="ticker-cell">${escapeHtml(d.ticker)}</td>
-            <td class="num">${fmtNum(d.gross, 2)}</td>
-            <td class="num">${fmtNum(d.tax || 0, 2)}</td>
-            <td class="num pos">${fmtEUR((d.gross - (d.tax || 0)) * (d.fx || 1))}</td>
-            <td>${escapeHtml(d.currency || 'EUR')}</td>
-            <td><button class="btn btn-ghost btn-sm" onclick="openDivModal('${d.id}')">Bewerk</button></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`}
+    <div class="kpi-grid" style="margin-bottom:14px;">
+      <div class="kpi"><div class="kpi-label">${_divMode === 'received' ? 'Totaal ontvangen' : 'Verwacht komend jaar'}</div>
+        <div class="kpi-value kpi-accent">${fmtEUR(_divMode === 'received' ? totalShown : forwardDiv)}</div>
+        <div class="dt-toggle" style="margin-top:6px;">
+          <button class="${_divGrossNet === 'gross' ? 'active' : ''}" onclick="setDivGrossNet('gross')">Bruto</button>
+          <button class="${_divGrossNet === 'net' ? 'active' : ''}" onclick="setDivGrossNet('net')">Netto</button>
+        </div>
+      </div>
+      <div class="kpi"><div class="kpi-label">Per maand (gem.)</div>
+        <div class="kpi-value">${fmtEUR((_divMode === 'received' ? totalShown : forwardDiv) / 12)}</div>
+        <div class="kpi-sub">${_divMode === 'received' ? dv.length + ' betalingen' : 'Op basis van huidige positie'}</div>
+      </div>
+      <div class="kpi"><div class="kpi-label">Bronbelasting</div>
+        <div class="kpi-value">${fmtEUR(totalGross - totalNet)}</div>
+        <div class="kpi-sub">${totalGross > 0 ? fmtPct(((totalGross - totalNet) / totalGross) * 100, 1) : '—'} effectief</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">${_divMode === 'received' ? 'Dividend per maand (ontvangen)' : 'Verwacht dividend per maand'}</div></div>
+      <div class="chart-wrap" id="divModeChart"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Per aandeel</div></div>
+      <div class="tbl-wrap">
+        ${!perTickerArr.length ? `<div class="empty" style="padding:30px;">Nog geen dividenden</div>` : `
+        <table class="tbl">
+          <thead><tr><th>Effect</th><th class="num">Betalingen</th><th class="num">Dividend (EUR)</th><th class="num">Aandeel</th><th class="num">YoC</th></tr></thead>
+          <tbody>${perTickerArr.map(r => {
+            const tk = getTicker(r.ticker);
+            const h = holdings.find(x => x.ticker === r.ticker);
+            const v = _divGrossNet === 'gross' ? r.gross : r.net;
+            const pct = totalForPct > 0 ? (v / totalForPct) * 100 : 0;
+            const yoc = h && h.costEur > 0 ? (r.net / h.costEur) * 100 : 0;
+            return `<tr style="cursor:pointer" onclick="openTickerModal('${tk?.id || ''}')">
+              <td><div class="sec-row-brand">${brandLogoHTML(tk || { symbol: r.ticker })}<div class="sec-name"><span class="sec-name-primary">${escapeHtml(tk?.name || r.ticker)}</span><span class="sec-name-secondary">${escapeHtml(r.ticker)}</span></div></div></td>
+              <td class="num">${r.count}</td>
+              <td class="num pos">${fmtEUR(v)}</td>
+              <td class="num">${fmtPct(pct, 1)}</td>
+              <td class="num">${yoc > 0 ? fmtPct(yoc, 2) : '—'}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Alle betalingen</div>
+        <div class="card-actions"><button class="btn btn-sm" onclick="openDivModal()">+ Toevoegen</button></div>
+      </div>
+      <div class="filter-bar">
+        <input class="input" id="divFilter" placeholder="Zoek ticker..." oninput="filterDivTable(this.value)">
+        <span class="spacer"></span>
+        <span class="text-muted text-mono" style="font-size:12px;">${dv.length} betalingen</span>
+      </div>
+      <div class="tbl-wrap">
+        ${dv.length === 0 ? `<div class="empty"><div class="empty-title">Geen dividenden</div><div class="empty-msg">Voeg ontvangen dividenden toe of importeer ze via CSV.</div></div>` : `
+        <table class="tbl" id="divTable">
+          <thead><tr><th>Datum</th><th>Effect</th><th class="num">Bruto</th><th class="num">Belasting</th><th class="num">Netto (EUR)</th><th></th></tr></thead>
+          <tbody>${dv.map(d => { const tk = getTicker(d.ticker); return `
+            <tr data-ticker="${escapeHtml(d.ticker)}">
+              <td>${fmtDate(d.date)}</td>
+              <td><div class="sec-row-brand">${brandLogoHTML(tk || { symbol: d.ticker })}<div class="sec-name"><span class="sec-name-primary">${escapeHtml(tk?.name || d.ticker)}</span><span class="sec-name-secondary">${escapeHtml(d.ticker)}</span></div></div></td>
+              <td class="num">${fmtNum(d.gross, 2)} ${escapeHtml(d.currency || '')}</td>
+              <td class="num">${fmtNum(d.tax || 0, 2)}</td>
+              <td class="num pos">${fmtEUR((d.gross - (d.tax || 0)) * (d.fx || 1))}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="openDivModal('${d.id}')">Bewerk</button></td>
+            </tr>`;}).join('')}
+          </tbody>
+        </table>`}
+      </div>
     </div>
   `;
+  renderDivModeChart(forwardDiv);
 }
+
+function renderDivModeChart(forwardDivPerYear) {
+  const wrap = document.getElementById('divModeChart');
+  if (!wrap) return;
+  if (_divMode === 'received') {
+    /* Show received per month with YoY overlay */
+    const buckets = new Map();
+    const factor = _divGrossNet === 'gross' ? 1 : 1; /* both already computed below */
+    pfDividends().forEach(d => {
+      const dt = new Date(d.date);
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      const eur = (_divGrossNet === 'gross' ? (+d.gross || 0) : ((+d.gross || 0) - (+d.tax || 0))) * (+d.fx || 1);
+      buckets.set(key, (buckets.get(key) || 0) + eur);
+    });
+    if (!buckets.size) { wrap.innerHTML = '<div class="empty" style="padding:24px;">Nog geen dividenden ontvangen</div>'; return; }
+    const sorted = [...buckets.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const max = Math.max(...sorted.map(x => x[1]));
+    const W = 800, H = 240, P = 36;
+    const bw = (W - P * 2) / sorted.length;
+    let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+    for (let i = 0; i <= 4; i++) {
+      const y = P + (H - P * 1.5) * (i / 4);
+      const val = max * (1 - i / 4);
+      svg += `<line x1="${P}" y1="${y}" x2="${W - 8}" y2="${y}" stroke="currentColor" stroke-opacity="0.08"/>`;
+      svg += `<text x="${P - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.5" font-family="JetBrains Mono">${Math.round(val)}</text>`;
+    }
+    sorted.forEach(([k, v], i) => {
+      const x = P + i * bw + 2;
+      const w = bw - 4;
+      const h = max > 0 ? (v / max) * (H - P * 1.5) : 0;
+      const y = H - P / 2 - h;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="var(--mint)" opacity="0.85"><title>${fmtMonth(k + '-01')}: ${fmtEUR(v)}</title></rect>`;
+      if (sorted.length <= 24 || i % Math.ceil(sorted.length / 12) === 0) {
+        svg += `<text x="${x + w / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">${fmtMonth(k + '-01')}</text>`;
+      }
+    });
+    svg += '</svg>';
+    wrap.innerHTML = svg;
+  } else {
+    /* PADI mode — show expected per month from ticker.dps + freq distribution */
+    const monthMap = new Map();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + i);
+      monthMap.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, 0);
+    }
+    computeHoldings().forEach(h => {
+      const tk = getTicker(h.ticker);
+      if (!tk?.dps || !tk.freq) return;
+      const fx = fxForCurrency(tk.currency);
+      const perPayment = (tk.dps * h.qty * fx) / tk.freq * (_divGrossNet === 'gross' ? 1 : 0.85);
+      /* Distribute over next 12 months based on freq */
+      const monthsBetween = Math.round(12 / tk.freq);
+      const baseDate = tk.payDate ? new Date(tk.payDate) : new Date();
+      for (let i = 0; i < tk.freq; i++) {
+        const d = new Date(baseDate);
+        d.setMonth(d.getMonth() + i * monthsBetween);
+        if (d < new Date()) d.setFullYear(d.getFullYear() + 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (monthMap.has(key)) monthMap.set(key, monthMap.get(key) + perPayment);
+      }
+    });
+    const sorted = [...monthMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const max = Math.max(...sorted.map(x => x[1]), 1);
+    const W = 800, H = 240, P = 36;
+    const bw = (W - P * 2) / sorted.length;
+    let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+    for (let i = 0; i <= 4; i++) {
+      const y = P + (H - P * 1.5) * (i / 4);
+      svg += `<line x1="${P}" y1="${y}" x2="${W - 8}" y2="${y}" stroke="currentColor" stroke-opacity="0.08"/>`;
+      svg += `<text x="${P - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.5" font-family="JetBrains Mono">${Math.round(max * (1 - i / 4))}</text>`;
+    }
+    sorted.forEach(([k, v], i) => {
+      const x = P + i * bw + 2;
+      const w = bw - 4;
+      const h = (v / max) * (H - P * 1.5);
+      const y = H - P / 2 - h;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="var(--sky)" opacity="0.7"><title>${fmtMonth(k + '-01')}: ${fmtEUR(v)} (prognose)</title></rect>`;
+      svg += `<text x="${x + w / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">${fmtMonth(k + '-01')}</text>`;
+    });
+    svg += '</svg>';
+    wrap.innerHTML = svg;
+  }
+}
+
 function filterDivTable(q) {
   q = (q || '').toLowerCase();
   document.querySelectorAll('#divTable tbody tr').forEach(tr => {
@@ -3497,6 +3973,28 @@ function renderSettings() {
     </div>
 
     <div class="card mb-2" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Strategieën</div>
+        <div class="card-actions"><button class="btn btn-sm" onclick="openStratModal()">+ Nieuwe</button></div>
+      </div>
+      <div class="strat-list">
+        ${(rawState.strategies || []).map(s => {
+          /* Count tickers + actual % */
+          const totalValue = computeHoldings().reduce((sum, h) => { const tk = getTicker(h.ticker); return sum + valueOfHolding(h, tk); }, 0);
+          const stratValue = computeHoldings().filter(h => getTicker(h.ticker)?.strategyId === s.id).reduce((sum, h) => { const tk = getTicker(h.ticker); return sum + valueOfHolding(h, tk); }, 0);
+          const actualPct = totalValue > 0 ? (stratValue / totalValue) * 100 : 0;
+          return `<div class="strat-row">
+            <div class="strat-color-dot" style="background:${escapeHtml(s.color)}"></div>
+            <div>
+              <div class="strat-info-name">${escapeHtml(s.name)}</div>
+              <div class="strat-info-target">${fmtPct(actualPct, 1)} werkelijk${s.targetPct > 0 ? ` · ${s.targetPct}% target` : ''}</div>
+            </div>
+            <button class="btn btn-sm" onclick="openStratModal('${s.id}')">Bewerk</button>
+          </div>`;
+        }).join('') || '<div class="text-muted" style="padding:10px;">Geen strategieën — klik "+ Nieuwe" om een eigen label toe te voegen.</div>'}
+      </div>
+    </div>
+
+    <div class="card mb-2" style="margin-bottom:14px;">
       <div class="card-header"><div class="card-title">Synchronisatie</div></div>
       <div class="settings-row">
         <div class="settings-label">
@@ -3634,6 +4132,7 @@ window.addEventListener('hashchange', renderAll);
 window.addEventListener('DOMContentLoaded', async () => {
   initState();
   applyTheme();
+  applyTimetravelFromUrl();
   renderAll();
   await loadGist();
   autoRefreshOnBoot();
