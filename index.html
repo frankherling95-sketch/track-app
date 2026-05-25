@@ -1144,7 +1144,11 @@ function initState() {
   if (!rawState.settings) rawState.settings = { theme: 'auto', baseCurrency: 'EUR' };
   if (!rawState.settings.baseCurrency) rawState.settings.baseCurrency = 'EUR';
   if (!rawState.settings.theme) rawState.settings.theme = 'auto';
+  if (rawState.settings.excludeCashFlows === undefined) rawState.settings.excludeCashFlows = true;
 }
+
+function isCashFlowExcluded() { return !!rawState.settings?.excludeCashFlows; }
+const CASH_FLOW_TYPES = ['storting', 'opname', 'broker_fee', 'stamp_duty', 'securities_lending', 'dividend_correction', 'currency_conversion'];
 
 function scheduleSave() {
   try { localStorage.setItem(LS_BACKUP_KEY, JSON.stringify(rawState)); } catch (e) {}
@@ -1367,8 +1371,9 @@ function computeClosedHoldings() {
   return [...map.values()].filter(h => Math.abs(h.qty) < 0.000001 && Math.abs(h.realizedEur) > 0.01);
 }
 
-/* Cash balance — respects timetravel */
+/* Cash balance — respects timetravel. Returns 0 als cash-flows uitgesloten zijn. */
 function computeCash() {
+  if (isCashFlowExcluded()) return 0;
   const cutoff = getNowISO();
   let cash = 0;
   pfTransactions().filter(t => (t.date || '') <= cutoff).forEach(tx => {
@@ -1508,11 +1513,13 @@ function computeRealized() {
   return computeHoldings().reduce((s, h) => s + (h.realizedEur || 0), 0);
 }
 
-/* Net worth (marktwaarde + cash) op een specifieke datum */
+/* Net worth (marktwaarde + cash) op een specifieke datum. Cash overgeslagen
+   als excludeCashFlows aan staat. */
 function valueAtDate(isoDate) {
   const cutoff = isoDate;
   const holdings = new Map();
   let cash = 0;
+  const excludeCash = isCashFlowExcluded();
   pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))
     .filter(t => (t.date || '') <= cutoff).forEach(tx => {
     const fx = +tx.fx || 1, fee = +tx.fee || 0;
@@ -1545,7 +1552,7 @@ function valueAtDate(isoDate) {
     const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
     marketValue += h.qty * priceEur;
   });
-  return marketValue + cash;
+  return excludeCash ? marketValue : marketValue + cash;
 }
 
 function computeYtd() {
@@ -2073,18 +2080,25 @@ function renderPerfVermogen() {
   if (!body) return;
   const series = buildValueSeries();
   if (!series.length) { body.innerHTML = '<div class="empty" style="padding:30px;">Geen data</div>'; return; }
-  const curVal = portfolioStats().currentValue + computeCash();
-  const startVal = series[0].total || 0;
-  const change = curVal - startVal;
+  const stats = portfolioStats();
+  const cash = computeCash();
+  const curVal = stats.currentValue + cash;
+  const excludeCash = isCashFlowExcluded();
   const totalDeposits = pfTransactions().filter(t => t.type === 'storting').reduce((s, t) => s + ((+t.amount || 0) * (+t.fx || 1)), 0);
   const totalWithdrawals = pfTransactions().filter(t => t.type === 'opname').reduce((s, t) => s + ((+t.amount || 0) * (+t.fx || 1)), 0);
-  const totalGains = curVal - (totalDeposits - totalWithdrawals);
+  /* Resultaat: als cash uitgesloten, simpel = marktwaarde - kostprijs van openstaande posities */
+  const totalGains = excludeCash ? (stats.currentValue - stats.invested) : (curVal - (totalDeposits - totalWithdrawals));
   body.innerHTML = `
     <div class="perf-summary">
       <div class="perf-summary-row">
-        <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--mint)"></span>Huidig vermogen</span>
+        <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--mint)"></span>${excludeCash ? 'Marktwaarde portefeuille' : 'Huidig vermogen'}</span>
         <span class="perf-summary-val">${fmtEUR(curVal)}</span>
       </div>
+      ${excludeCash ? `
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Kostprijs (geïnvesteerd)</span>
+        <span class="perf-summary-val">${fmtEUR(stats.invested)}</span>
+      </div>` : `
       <div class="perf-summary-row">
         <span class="perf-summary-label">Inleg totaal</span>
         <span class="perf-summary-val">${fmtEUR(totalDeposits)}</span>
@@ -2092,13 +2106,18 @@ function renderPerfVermogen() {
       <div class="perf-summary-row">
         <span class="perf-summary-label">Opnames totaal</span>
         <span class="perf-summary-val">${fmtEUR(totalWithdrawals)}</span>
-      </div>
+      </div>`}
       <div class="perf-summary-row">
-        <span class="perf-summary-label">Resultaat (winst/verlies)</span>
+        <span class="perf-summary-label">${excludeCash ? 'Ongerealiseerd resultaat' : 'Resultaat (winst/verlies)'}</span>
         <span class="perf-summary-val ${totalGains >= 0 ? 'pos' : 'neg'}">${totalGains >= 0 ? '+' : ''}${fmtEUR(totalGains)}</span>
       </div>
+      ${excludeCash ? `
+      <div class="perf-summary-row">
+        <span class="perf-summary-label">Gerealiseerd uit verkopen</span>
+        <span class="perf-summary-val ${computeRealized() >= 0 ? 'pos' : 'neg'}">${computeRealized() >= 0 ? '+' : ''}${fmtEUR(computeRealized())}</span>
+      </div>` : ''}
     </div>
-    <div class="card"><div class="card-header"><div class="card-title">Vermogen over tijd</div></div><div class="chart-wrap" id="vermogenChart"></div></div>
+    <div class="card"><div class="card-header"><div class="card-title">${excludeCash ? 'Marktwaarde over tijd' : 'Vermogen over tijd'}</div></div><div class="chart-wrap" id="vermogenChart"></div></div>
   `;
   /* Reuse renderNwChart but target vermogenChart */
   const orig = document.getElementById.bind(document);
@@ -3681,8 +3700,10 @@ function setActFilter(field, value) { _actFilter[field] = value; renderTransacti
 
 function renderTransactions() {
   const c = document.getElementById('content');
-  const allTx = pfTransactions().slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const totalDeposits = allTx.filter(t => t.type === 'storting').reduce((s, t) => s + ((+t.amount || 0) * (+t.fx || 1)), 0);
+  const allTxRaw = pfTransactions().slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  /* Cash flows uitsluiten als setting aan staat */
+  const allTx = isCashFlowExcluded() ? allTxRaw.filter(t => !CASH_FLOW_TYPES.includes(t.type)) : allTxRaw;
+  const totalDeposits = allTxRaw.filter(t => t.type === 'storting').reduce((s, t) => s + ((+t.amount || 0) * (+t.fx || 1)), 0);
   /* Apply filters */
   const tx = allTx.filter(t => {
     if (_actFilter.type && t.type !== _actFilter.type) return false;
@@ -3700,7 +3721,7 @@ function renderTransactions() {
     <div class="act-hero">
       <div class="act-hero-text">
         <div class="act-hero-title">Mutaties</div>
-        <div class="act-hero-sub">Inleg via broker: ${fmtEUR(totalDeposits)}</div>
+        <div class="act-hero-sub">${isCashFlowExcluded() ? `${allTx.length} trades + dividenden (cash mutaties verborgen)` : `Inleg via broker: ${fmtEUR(totalDeposits)}`}</div>
       </div>
       <div class="act-hero-icon">💸</div>
     </div>
@@ -3711,8 +3732,10 @@ function renderTransactions() {
         <option value="koop" ${_actFilter.type === 'koop' ? 'selected' : ''}>Koop</option>
         <option value="verkoop" ${_actFilter.type === 'verkoop' ? 'selected' : ''}>Verkoop</option>
         <option value="dividend" ${_actFilter.type === 'dividend' ? 'selected' : ''}>Dividend</option>
+        ${isCashFlowExcluded() ? '' : `
         <option value="storting" ${_actFilter.type === 'storting' ? 'selected' : ''}>Storting</option>
         <option value="opname" ${_actFilter.type === 'opname' ? 'selected' : ''}>Opname</option>
+        `}
       </select>
       <div class="act-date-range">
         <input type="date" value="${_actFilter.from}" onchange="setActFilter('from', this.value)" title="Van">
@@ -4427,6 +4450,20 @@ function renderSettings() {
     </div>
 
     <div class="card mb-2" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Berekening</div></div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Cash mutaties uitsluiten</div>
+          <div class="settings-label-desc">Aan: vermogen = positions × actuele koers. Stortingen/opnames/rente/card-uitgaven worden verborgen in de Mutaties-tab en niet meegerekend in cash-saldo. Aan = simpel stock-portfolio. Uit = volledige boekhouding.</div>
+        </div>
+        <div class="seg">
+          <button class="seg-btn ${isCashFlowExcluded() ? 'active' : ''}" onclick="setExcludeCash(true)">Aan</button>
+          <button class="seg-btn ${!isCashFlowExcluded() ? 'active' : ''}" onclick="setExcludeCash(false)">Uit</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-2" style="margin-bottom:14px;">
       <div class="card-header"><div class="card-title">Marktdata</div></div>
       <div class="settings-row">
         <div class="settings-label">
@@ -4540,6 +4577,11 @@ function setAutoRefresh(on) {
   rawState.settings.autoRefresh = !!on;
   scheduleSave();
   renderSettings();
+}
+function setExcludeCash(on) {
+  rawState.settings.excludeCashFlows = !!on;
+  scheduleSave();
+  renderAll();
 }
 function applyTheme() {
   const t = rawState.settings?.theme || 'auto';
