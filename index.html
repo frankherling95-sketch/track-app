@@ -3129,11 +3129,9 @@ function applyBrokerPreset() {
   /* Trade Republic auto-detect */
   if ((broker === 'auto' || broker === 'tradeRepublic') && detectTradeRepublic()) {
     document.getElementById('csvBroker').value = 'tradeRepublic';
-    document.getElementById('csvSummary').innerHTML = `<strong style="color:var(--success)">Trade Republic CSV gedetecteerd</strong> — alle types (BUY/SELL/DIVIDEND/STOCKPERK/CUSTOMER_INBOUND/OUTBOUND/INTEREST_PAYMENT) worden automatisch verwerkt. ISIN's worden via Yahoo opgezocht voor echte tickers.`;
-    document.getElementById('csvImportBtn').disabled = false;
-    document.getElementById('csvImportBtn').textContent = `Importeer ${csvData.length} rijen (TR-modus)`;
-    /* Hide mapping ui */
+    /* Hide mapping ui (niet gebruikt voor TR) */
     document.querySelectorAll('.csv-map select').forEach(s => { s.value = ''; });
+    showTradeRepublicSummary();
     return;
   }
   let preset = BROKER_PRESETS[broker]?.[kind];
@@ -3169,6 +3167,11 @@ function applyBrokerPreset() {
 }
 
 function updateCsvSummary() {
+  /* TR-mode: skip generic mapping logic — show TR breakdown instead */
+  if (document.getElementById('csvBroker').value === 'tradeRepublic' && detectTradeRepublic()) {
+    showTradeRepublicSummary();
+    return;
+  }
   const kind = document.getElementById('csvKind').value;
   const dateIdx = document.getElementById('mapDate').value;
   const tickerIdx = document.getElementById('mapTicker').value;
@@ -3188,6 +3191,57 @@ function updateCsvSummary() {
   const btn = document.getElementById('csvImportBtn');
   btn.disabled = valid === 0;
   btn.textContent = `Importeer ${valid} ${valid === 1 ? 'rij' : 'rijen'}`;
+}
+
+function showTradeRepublicSummary() {
+  const colIdx = name => csvHeaders.findIndex(h => h.toLowerCase() === name.toLowerCase());
+  const catIdx = colIdx('category'), typeIdx = colIdx('type');
+  const counts = {};
+  const labels = {
+    'TRADING/BUY': '🟢 Koop',
+    'TRADING/SELL': '🔴 Verkoop',
+    'CASH/DIVIDEND': '💰 Dividend',
+    'CASH/CUSTOMER_INPAYMENT': '⬇️ Storting (Apple Pay)',
+    'CASH/CUSTOMER_INBOUND': '⬇️ Storting (SEPA)',
+    'CASH/CUSTOMER_OUTBOUND_REQUEST': '⬆️ Opname',
+    'CASH/INTEREST_PAYMENT': '✨ Rente-inkomst',
+    'CASH/STOCKPERK': '🎁 Stockperk (gratis aandeel)',
+    'CASH/CARD_TRANSACTION': '💳 Card-uitgave',
+    'CASH/DIVIDEND_CORRECTION': '🔄 Dividend correctie',
+  };
+  let knownCount = 0, unknownCount = 0;
+  const unknownTypes = new Set();
+  csvData.forEach(r => {
+    const cat = (r[catIdx] || '').toUpperCase();
+    const type = (r[typeIdx] || '').toUpperCase();
+    const key = `${cat}/${type}`;
+    if (labels[key]) {
+      counts[key] = (counts[key] || 0) + 1;
+      knownCount++;
+    } else {
+      unknownTypes.add(key);
+      unknownCount++;
+    }
+  });
+  const breakdown = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `<div style="display:flex;justify-content:space-between;padding:3px 0;"><span>${labels[k]}</span><span class="text-mono" style="font-weight:600;">${n}</span></div>`).join('');
+  const summaryEl = document.getElementById('csvSummary');
+  summaryEl.style.fontSize = '12px';
+  summaryEl.innerHTML = `
+    <div style="background:var(--mint-soft); padding:10px 12px; border-radius:8px; margin-bottom:8px;">
+      <strong style="color:var(--success); font-size:13px;">✓ Trade Republic CSV gedetecteerd</strong><br>
+      <span style="color:var(--text-muted);">${csvData.length} rijen · ISIN's worden via Yahoo opgezocht voor echte tickers</span>
+    </div>
+    <div style="background:var(--surface2); padding:8px 12px; border-radius:8px;">
+      <div style="font-weight:700; margin-bottom:4px;">Wordt geïmporteerd:</div>
+      ${breakdown}
+      ${unknownCount > 0 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;color:var(--text-muted);"><span>⊘ Onbekende types${unknownTypes.size <= 5 ? ` (${[...unknownTypes].join(', ')})` : ''}</span><span class="text-mono">${unknownCount}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid var(--border);margin-top:4px;font-weight:700;"><span>Totaal te importeren</span><span class="text-mono">${knownCount}</span></div>
+    </div>
+  `;
+  const btn = document.getElementById('csvImportBtn');
+  btn.disabled = knownCount === 0;
+  btn.textContent = `Importeer ${knownCount} rijen (TR-modus)`;
 }
 
 function parseCsvDate(s) {
