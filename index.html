@@ -1566,7 +1566,9 @@ function computeYtd() {
 
 /* Brand logo helper — Clearbit + initial fallback.
    Maps common tickers to domains. User can override via ticker.domain. */
+const CRYPTO_DOMAINS = { BTC:'bitcoin.org', 'BTC-EUR':'bitcoin.org', 'BTC-USD':'bitcoin.org', ETH:'ethereum.org', 'ETH-EUR':'ethereum.org', 'ETH-USD':'ethereum.org' };
 const TICKER_DOMAINS = {
+  ...CRYPTO_DOMAINS,
   AAPL:'apple.com', MSFT:'microsoft.com', GOOGL:'abc.xyz', GOOG:'abc.xyz', NVDA:'nvidia.com',
   AMZN:'amazon.com', META:'meta.com', TSLA:'tesla.com', NFLX:'netflix.com', ADBE:'adobe.com',
   CRM:'salesforce.com', ORCL:'oracle.com', IBM:'ibm.com', CSCO:'cisco.com', INTC:'intel.com',
@@ -2259,17 +2261,138 @@ async function fetchYahooFullData(symbol) {
   };
 }
 
+/* Known crypto symbols (zonder -EUR suffix). Wordt gebruikt om type='crypto'
+   forceren wanneer user import t als stock gemarkeerd had, en om de juiste
+   Yahoo-lookup te doen. */
+const KNOWN_CRYPTOS = new Set(['BTC','ETH','XRP','SOL','ADA','DOT','MATIC','DOGE','LINK','LTC','UNI','AVAX','ATOM','XLM','TRX','BNB','NEAR','APT','SHIB','PEPE','BCH','XMR','EOS','TON','ICP','ALGO']);
+
+/* Statische metadata map voor populaire tickers + ETFs + jouw TR portfolio.
+   Wordt gebruikt als Yahoo quoteSummary niets oplevert. Keyed op Yahoo-ticker. */
+const STATIC_TICKER_META = {
+  /* Mega-cap tech */
+  AAPL:  { sector:'Technology', industry:'Consumer Electronics', country:'US', type:'stock' },
+  MSFT:  { sector:'Technology', industry:'Software', country:'US', type:'stock' },
+  GOOGL: { sector:'Communication', industry:'Internet Content', country:'US', type:'stock' },
+  GOOG:  { sector:'Communication', industry:'Internet Content', country:'US', type:'stock' },
+  AMZN:  { sector:'Consumer Discretionary', industry:'Internet Retail', country:'US', type:'stock' },
+  META:  { sector:'Communication', industry:'Internet Content', country:'US', type:'stock' },
+  NVDA:  { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  TSLA:  { sector:'Consumer Discretionary', industry:'Auto Manufacturers', country:'US', type:'stock' },
+  NFLX:  { sector:'Communication', industry:'Entertainment', country:'US', type:'stock' },
+  ADBE:  { sector:'Technology', industry:'Software', country:'US', type:'stock' },
+  AMD:   { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  AVGO:  { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  TSM:   { sector:'Technology', industry:'Semiconductors', country:'TW', type:'stock' },
+  /* NL/EU */
+  'ASML.AS': { sector:'Technology', industry:'Semiconductors', country:'NL', type:'stock' },
+  ASML:      { sector:'Technology', industry:'Semiconductors', country:'NL', type:'stock' },
+  /* User's TR portfolio */
+  MDB:   { sector:'Technology', industry:'Software', country:'US', type:'stock' },
+  TTD:   { sector:'Communication', industry:'Internet Advertising', country:'US', type:'stock' },
+  PLTR:  { sector:'Technology', industry:'Software', country:'US', type:'stock' },
+  MRVL:  { sector:'Technology', industry:'Semiconductors', country:'US', type:'stock' },
+  '0285.HK': { sector:'Technology', industry:'Electronic Equipment', country:'HK', type:'stock' },
+  /* Dividend / banks / healthcare */
+  JPM:   { sector:'Financials', industry:'Banks', country:'US', type:'stock' },
+  BAC:   { sector:'Financials', industry:'Banks', country:'US', type:'stock' },
+  V:     { sector:'Financials', industry:'Credit Services', country:'US', type:'stock' },
+  MA:    { sector:'Financials', industry:'Credit Services', country:'US', type:'stock' },
+  JNJ:   { sector:'Healthcare', industry:'Pharmaceuticals', country:'US', type:'stock' },
+  PFE:   { sector:'Healthcare', industry:'Pharmaceuticals', country:'US', type:'stock' },
+  KO:    { sector:'Consumer Staples', industry:'Beverages', country:'US', type:'stock' },
+  PG:    { sector:'Consumer Staples', industry:'Household Products', country:'US', type:'stock' },
+  XOM:   { sector:'Energy', industry:'Oil & Gas', country:'US', type:'stock' },
+  CVX:   { sector:'Energy', industry:'Oil & Gas', country:'US', type:'stock' },
+  O:     { sector:'Real Estate', industry:'REIT - Retail', country:'US', type:'reit' },
+  /* ETFs (jouw portfolio) */
+  'CSPX.L':   { sector:'ETF', industry:'S&P 500', country:'IE', type:'etf' },
+  'CSPX.AS':  { sector:'ETF', industry:'S&P 500', country:'IE', type:'etf' },
+  'SXR8.DE':  { sector:'ETF', industry:'S&P 500', country:'IE', type:'etf' },
+  'IWDA.L':   { sector:'ETF', industry:'Wereld (Developed)', country:'IE', type:'etf' },
+  'IWDA.AS':  { sector:'ETF', industry:'Wereld (Developed)', country:'IE', type:'etf' },
+  'EUNL.DE':  { sector:'ETF', industry:'Wereld (Developed)', country:'IE', type:'etf' },
+  'VWRL.AS':  { sector:'ETF', industry:'Wereld', country:'IE', type:'etf' },
+  'VWCE.DE':  { sector:'ETF', industry:'Wereld', country:'IE', type:'etf' },
+  'XAIX.DE':  { sector:'ETF', industry:'AI & Big Data', country:'IE', type:'etf' },
+  'SMH.AS':   { sector:'ETF', industry:'Semiconductors', country:'IE', type:'etf' },
+  'WCBR.DE':  { sector:'ETF', industry:'Cybersecurity', country:'IE', type:'etf' },
+  'WCBR.L':   { sector:'ETF', industry:'Cybersecurity', country:'IE', type:'etf' },
+  'IPRV.AS':  { sector:'ETF', industry:'Listed Private Equity', country:'IE', type:'etf' },
+  'IPRP.AS':  { sector:'ETF', industry:'Listed Private Equity', country:'IE', type:'etf' },
+  'TDIV.AS':  { sector:'ETF', industry:'Dividend (Developed)', country:'NL', type:'etf' },
+  'IEUR.AS':  { sector:'ETF', industry:'MSCI Europe', country:'IE', type:'etf' },
+  /* Cryptos */
+  'BTC':     { sector:'Crypto', industry:'Cryptocurrency', country:'Globaal', type:'crypto' },
+  'BTC-EUR': { sector:'Crypto', industry:'Cryptocurrency', country:'Globaal', type:'crypto' },
+  'BTC-USD': { sector:'Crypto', industry:'Cryptocurrency', country:'Globaal', type:'crypto' },
+  'ETH':     { sector:'Crypto', industry:'Cryptocurrency', country:'Globaal', type:'crypto' },
+  'ETH-EUR': { sector:'Crypto', industry:'Cryptocurrency', country:'Globaal', type:'crypto' },
+};
+
+/* Statische metadata toepassen, alleen velden invullen die nog leeg zijn
+   (zodat user-edits niet worden overschreven) */
+function applyStaticMeta(t) {
+  if (!t) return;
+  /* Crypto auto-detect via symbol */
+  if (KNOWN_CRYPTOS.has((t.symbol || '').toUpperCase()) && t.type !== 'crypto') {
+    t.type = 'crypto';
+  }
+  const meta = STATIC_TICKER_META[t.symbol] || STATIC_TICKER_META[(t.symbol || '').toUpperCase()];
+  if (!meta) return;
+  if (meta.type && (!t.type || t.type === 'stock')) t.type = meta.type;
+  if (meta.sector && !t.sector) t.sector = meta.sector;
+  if (meta.industry && !t.industry) t.industry = meta.industry;
+  if (meta.country && !t.country) t.country = meta.country;
+}
+
+/* Yahoo quoteSummary endpoint voor sector/industry/country/marketCap.
+   Vereist soms een crumb cookie maar werkt vaak via onze proxies. */
+async function fetchYahooMetadata(symbol) {
+  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=assetProfile,summaryProfile,price`;
+  const json = await yahooFetch(url);
+  const r = json?.quoteSummary?.result?.[0];
+  if (!r) return null;
+  const profile = r.assetProfile || r.summaryProfile || {};
+  const price = r.price || {};
+  return {
+    sector: profile.sector || null,
+    industry: profile.industry || null,
+    country: profile.country || null,
+    marketCap: price.marketCap?.raw || null,
+    name: price.longName || price.shortName || null,
+  };
+}
+
 /* Refresh one ticker. Returns true on success. */
 async function refreshTicker(symbolOrTicker) {
   const t = typeof symbolOrTicker === 'string' ? getTicker(symbolOrTicker) : symbolOrTicker;
   if (!t) return false;
-  /* Voor crypto verwacht Yahoo "<SYMBOL>-EUR" (bv BTC-EUR), niet bare "BTC"
-     want bare "BTC" geeft BlackRock Capital Investment stock (~$5-30) terug */
+  /* Auto-detect crypto via symbol */
+  if (KNOWN_CRYPTOS.has((t.symbol || '').toUpperCase()) && t.type !== 'crypto') {
+    t.type = 'crypto';
+  }
+  /* Voor crypto verwacht Yahoo "<SYMBOL>-EUR" (bv BTC-EUR) want bare "BTC" geeft
+     Grayscale Bitcoin Mini Trust ETF terug */
   let lookupSymbol = t.symbol;
   if (t.type === 'crypto' && !/-(EUR|USD|GBP|USDT)$/i.test(t.symbol)) {
     lookupSymbol = `${t.symbol}-EUR`;
   }
   const data = await fetchYahooFullData(lookupSymbol);
+  /* Probeer quoteSummary voor sector/industry/marketCap (alleen voor non-crypto) */
+  if (t.type !== 'crypto') {
+    try {
+      const meta = await fetchYahooMetadata(lookupSymbol);
+      if (meta) {
+        if (meta.sector && !t.sector) t.sector = meta.sector;
+        if (meta.industry && !t.industry) t.industry = meta.industry;
+        if (meta.country && !t.country) t.country = meta.country;
+        if (meta.marketCap && !t.marketCap) t.marketCap = meta.marketCap;
+        if (meta.name && !t.name) t.name = meta.name;
+      }
+    } catch (e) {}
+  }
+  /* Statische fallback voor velden die nog niet gevuld zijn */
+  applyStaticMeta(t);
   if (!data) return false;
   /* Price + currency must stay paired — always refresh together when Yahoo returns price */
   if (data.price != null) {
@@ -3432,11 +3555,14 @@ async function commitTradeRepublicImport() {
       });
       const t = ensureTicker(ticker);
       if (!t.name && name) t.name = name;
+      /* Asset-type altijd overschrijven vanuit CSV (was bug: alleen als type leeg) */
       const assetClass = (r[idx.assetClass] || '').toUpperCase();
-      if (assetClass === 'FUND' && !t.type) t.type = 'etf';
-      else if (assetClass === 'STOCK' && !t.type) t.type = 'stock';
-      else if (assetClass === 'CRYPTO' && !t.type) t.type = 'crypto';
+      if (assetClass === 'FUND') t.type = 'etf';
+      else if (assetClass === 'CRYPTO') t.type = 'crypto';
+      else if (assetClass === 'STOCK') t.type = 'stock';
       if (!t.broker) t.broker = 'Trade Republic';
+      /* Apply static meta direct (sector/industry/country/marketCap) als bekend */
+      applyStaticMeta(t);
       added++;
     } else {
       /* Cash type: storting / opname / securities_lending */
