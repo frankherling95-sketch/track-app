@@ -54,58 +54,104 @@ body { font-family:var(--font-sans); background:var(--bg); color:var(--text); fo
 button { font-family:inherit; }
 
 /* ─────────── App shell ─────────── */
-.app { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
-.sidebar {
-  background:var(--navy); color:#E8EDF5; padding:18px 14px;
-  display:flex; flex-direction:column; gap:14px;
-  border-right:1px solid var(--border);
-  position:sticky; top:0; height:100vh;
+.app { display:flex; flex-direction:column; min-height:100vh; }
+
+/* Top nav (desktop primary, mobile shows compact header) */
+.top-nav {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:0 24px; display:flex; align-items:center; gap:24px;
+  position:sticky; top:0; z-index:30; height:60px;
 }
-.sb-brand { display:flex; align-items:center; gap:10px; padding:4px 6px 8px; }
-.sb-brand img { width:36px; height:36px; border-radius:8px; }
-.sb-brand-text { font-family:var(--font-display); font-weight:800; font-size:15px; letter-spacing:.2px; }
-.sb-brand-sub { font-size:11px; color:rgba(232,237,245,.6); font-weight:500; }
+.tn-brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+.tn-brand img { width:30px; height:30px; border-radius:7px; }
+.tn-brand-text { font-family:var(--font-display); font-weight:800; font-size:15px; letter-spacing:.2px; }
 
-.sb-pf-select { background:var(--navy-dark); border:1px solid rgba(255,255,255,.08); color:#E8EDF5; border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit; cursor:pointer; }
-.sb-pf-select:focus-visible { outline:2px solid var(--mint); outline-offset:1px; }
-
-.nav-list { display:flex; flex-direction:column; gap:2px; flex:1; }
-.nav-item {
-  display:flex; align-items:center; gap:10px; padding:10px 12px;
-  border-radius:8px; color:rgba(232,237,245,.78); cursor:pointer;
-  font-size:13px; font-weight:500; transition:background .15s, color .15s;
-  border-left:3px solid transparent; margin-left:-3px;
-  text-decoration:none;
+.tn-items { display:flex; align-items:center; gap:2px; flex:1; }
+.tn-item {
+  padding:8px 14px; border-radius:8px; color:var(--text-muted); cursor:pointer;
+  font-size:14px; font-weight:600; transition:background .15s, color .15s;
+  text-decoration:none; display:inline-flex; align-items:center; gap:8px;
 }
-.nav-item:hover { background:rgba(255,255,255,.04); color:#fff; }
-.nav-item.active { background:rgba(0,229,176,.08); color:#fff; border-left-color:var(--mint); font-weight:600; }
-.nav-item svg { width:18px; height:18px; flex-shrink:0; }
-.nav-badge { margin-left:auto; background:rgba(255,255,255,.08); color:rgba(232,237,245,.85); padding:1px 7px; border-radius:10px; font-size:11px; font-weight:600; font-family:var(--font-mono); }
-.nav-item.active .nav-badge { background:var(--mint); color:var(--navy); }
+.tn-item:hover { background:var(--surface2); color:var(--text); }
+.tn-item.active { color:var(--text); }
+.tn-item.active::after { content:''; display:block; }
 
-.sb-foot { display:flex; flex-direction:column; gap:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.06); }
-.sb-sync { display:flex; align-items:center; gap:8px; font-size:11px; color:rgba(232,237,245,.6); padding:6px 8px; }
-.sb-sync-dot { width:8px; height:8px; border-radius:50%; background:#6B7790; }
-.sb-sync.idle .sb-sync-dot { background:#6B7790; }
-.sb-sync.saving .sb-sync-dot { background:var(--gold); animation:pulse 1.2s infinite; }
-.sb-sync.saved .sb-sync-dot { background:var(--mint); }
-.sb-sync.error .sb-sync-dot { background:var(--rose); }
+.tn-right { display:flex; align-items:center; gap:10px; }
+
+/* Value pill — persistent net worth + YTD */
+.value-pill {
+  display:inline-flex; align-items:center; gap:0;
+  background:var(--surface); border:1px solid var(--border-strong);
+  border-radius:10px; padding:0; font-family:var(--font-mono);
+  cursor:pointer; transition:border-color .15s;
+}
+.value-pill:hover { border-color:var(--mint); }
+.value-pill-val { padding:7px 12px; font-size:13px; font-weight:700; color:var(--text); border-right:1px solid var(--border); }
+.value-pill-ytd { padding:7px 12px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; }
+.value-pill-ytd.pos { color:var(--success); }
+.value-pill-ytd.neg { color:var(--danger); }
+.value-pill-ytd-arrow { width:11px; height:11px; }
+
+.tn-gear {
+  background:transparent; border:none; cursor:pointer; padding:6px;
+  border-radius:8px; color:var(--text-muted); display:inline-flex;
+}
+.tn-gear:hover { background:var(--surface2); color:var(--text); }
+.tn-gear svg { width:20px; height:20px; }
+
+/* Bottom tab bar (mobile only) */
+.bottom-tab {
+  display:none; position:fixed; bottom:0; left:0; right:0; z-index:40;
+  background:var(--surface); border-top:1px solid var(--border);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom)) 4px;
+  justify-content:space-around;
+}
+.bt-item {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:6px 0; color:var(--text-hint); cursor:pointer;
+  background:transparent; border:none; font-family:inherit;
+  text-decoration:none; font-size:10px; font-weight:600; transition:color .15s;
+}
+.bt-item:hover { color:var(--text-muted); }
+.bt-item.active { color:var(--text); }
+.bt-item svg { width:22px; height:22px; }
+.bt-label { font-size:9px; letter-spacing:.2px; }
+
+/* Page header (inside content) */
+.page-head {
+  display:flex; align-items:center; gap:12px; margin-bottom:16px;
+}
+.page-title { font-family:var(--font-display); font-weight:700; font-size:24px; flex:1; line-height:1.1; }
+.page-sub { font-size:13px; color:var(--text-muted); font-weight:500; margin-top:2px; }
+.page-actions { display:flex; gap:8px; }
+
+.page-wrap { padding:20px 24px 32px; max-width:1400px; width:100%; margin:0 auto; flex:1; }
+.content { display:block; }
+
+/* Portfolio selector in nav */
+.tn-pf-select {
+  background:var(--surface2); border:1px solid var(--border); color:var(--text);
+  border-radius:8px; padding:6px 10px; font-size:13px; font-family:inherit;
+  font-weight:600; cursor:pointer; max-width:140px;
+}
+
+/* Status dot in nav */
+.tn-status { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); padding:6px 8px; }
+.tn-status-dot { width:7px; height:7px; border-radius:50%; background:#6B7790; }
+.tn-status.idle .tn-status-dot { background:#6B7790; }
+.tn-status.saving .tn-status-dot { background:var(--gold); animation:pulse 1.2s infinite; }
+.tn-status.saved .tn-status-dot { background:var(--mint); }
+.tn-status.error .tn-status-dot { background:var(--rose); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-.sb-btn { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); color:rgba(232,237,245,.85); padding:7px 10px; border-radius:8px; font-size:12px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:8px; }
-.sb-btn:hover { background:rgba(255,255,255,.08); color:#fff; }
-
-/* ─────────── Main column ─────────── */
-.main { display:flex; flex-direction:column; min-width:0; }
-.topbar {
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:14px 24px; display:flex; align-items:center; gap:16px;
-  position:sticky; top:0; z-index:20;
+/* Settings menu items */
+.sm-item {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-radius:8px; color:var(--text); text-decoration:none; cursor:pointer;
+  font-size:14px; font-weight:500;
 }
-.topbar-title { font-family:var(--font-display); font-weight:700; font-size:18px; flex:1; }
-.topbar-sub { font-size:12px; color:var(--text-muted); font-weight:500; }
-
-.content { padding:24px; max-width:1400px; width:100%; margin:0 auto; flex:1; }
+.sm-item:hover { background:var(--surface2); }
+.sm-item svg { flex-shrink:0; color:var(--text-muted); }
 
 /* ─────────── Buttons & inputs ─────────── */
 .btn { display:inline-flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border-strong); color:var(--text); padding:8px 14px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background .15s, border-color .15s; }
@@ -275,21 +321,23 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 
 /* ─────────── Mobile ─────────── */
 @media (max-width:768px) {
-  .app { grid-template-columns:1fr; }
-  .sidebar { position:fixed; left:-260px; top:0; bottom:0; width:240px; z-index:50; transition:left .25s; }
-  .sidebar.open { left:0; box-shadow:var(--shadow-lg); }
-  .topbar { padding:12px 16px; }
-  .content { padding:16px; }
+  .top-nav { padding:0 14px; gap:10px; height:54px; }
+  .tn-items { display:none; }
+  .tn-brand-text { display:none; }
+  .tn-pf-select { max-width:110px; padding:5px 8px; font-size:12px; }
+  .tn-status { display:none; }
+  .value-pill-val { padding:6px 10px; font-size:12px; }
+  .value-pill-ytd { padding:6px 10px; font-size:11px; }
+  .bottom-tab { display:flex; }
+  .page-wrap { padding:14px 14px calc(80px + env(safe-area-inset-bottom)); }
+  .page-title { font-size:20px; }
   .modal-grid { grid-template-columns:1fr; }
-  .topbar-burger { display:inline-flex !important; }
   .chart-grid { grid-template-columns:1fr; }
   .kpi-grid { grid-template-columns:1fr 1fr; }
 }
-.topbar-burger { display:none; background:transparent; border:none; padding:6px; cursor:pointer; color:var(--text); }
-.topbar-burger svg { width:22px; height:22px; }
-
-.scrim { position:fixed; inset:0; background:rgba(15,27,61,.4); z-index:40; display:none; }
-.scrim.open { display:block; }
+@media (min-width:769px) {
+  .bottom-tab { display:none !important; }
+}
 
 /* utility */
 .hidden { display:none !important; }
@@ -304,80 +352,104 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 </head>
 <body>
 <div class="app">
-  <!-- ─────────── Sidebar ─────────── -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sb-brand">
+  <!-- ─────────── Top nav ─────────── -->
+  <header class="top-nav">
+    <a class="tn-brand" href="#portfolio" onclick="navigate('portfolio');return false;">
       <img src="dividend-icon.svg" alt="">
-      <div>
-        <div class="sb-brand-text">Dividends</div>
-        <div class="sb-brand-sub">Herling Analytics</div>
-      </div>
-    </div>
-
-    <select class="sb-pf-select" id="pfSelect" onchange="switchPortfolio(this.value)"></select>
-
-    <nav class="nav-list" id="navList">
-      <a class="nav-item" data-route="dashboard" onclick="navigate('dashboard')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-        Dashboard
-      </a>
-      <a class="nav-item" data-route="transactions" onclick="navigate('transactions')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h13M3 7l4-4M3 7l4 4M21 17H8M21 17l-4-4M21 17l-4 4"/></svg>
-        Transacties <span class="nav-badge" id="badgeTx">0</span>
-      </a>
-      <a class="nav-item" data-route="dividends" onclick="navigate('dividends')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10c0-1.1.9-2 2-2h2c1.1 0 2 .9 2 2s-.9 2-2 2h-2c-1.1 0-2 .9-2 2s.9 2 2 2h2c1.1 0 2-.9 2-2"/></svg>
-        Dividenden <span class="nav-badge" id="badgeDiv">0</span>
-      </a>
-      <a class="nav-item" data-route="holdings" onclick="navigate('holdings')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l3-3 4 4 5-6"/></svg>
-        Posities <span class="nav-badge" id="badgeHold">0</span>
-      </a>
-      <a class="nav-item" data-route="calendar" onclick="navigate('calendar')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
-        Kalender
-      </a>
-      <a class="nav-item" data-route="projection" onclick="navigate('projection')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
-        Projectie
-      </a>
-      <a class="nav-item" data-route="tickers" onclick="navigate('tickers')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
-        Tickers
-      </a>
-      <a class="nav-item" data-route="settings" onclick="navigate('settings')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
-        Instellingen
-      </a>
+      <span class="tn-brand-text">Track</span>
+    </a>
+    <nav class="tn-items" id="tnItems">
+      <a class="tn-item" data-route="portfolio" onclick="navigate('portfolio')">Portfolio</a>
+      <a class="tn-item" data-route="performance" onclick="navigate('performance')">Performance</a>
+      <a class="tn-item" data-route="dividend" onclick="navigate('dividend')">Dividend</a>
+      <a class="tn-item" data-route="calendar" onclick="navigate('calendar')">Calendar</a>
+      <a class="tn-item" data-route="actions" onclick="navigate('actions')">Actions</a>
     </nav>
-
-    <div class="sb-foot">
-      <button class="sb-btn" onclick="openImportModal()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        CSV importeren
+    <div class="tn-right">
+      <select class="tn-pf-select" id="pfSelect" onchange="switchPortfolio(this.value)" title="Portefeuille"></select>
+      <button class="value-pill" id="valuePill" onclick="navigate('portfolio')" title="Net worth + YTD">
+        <span class="value-pill-val" id="valuePillVal">€ —</span>
+        <span class="value-pill-ytd" id="valuePillYtd">YTD —</span>
       </button>
-      <div class="sb-sync idle" id="syncBar">
-        <span class="sb-sync-dot"></span>
+      <div class="tn-status idle" id="syncBar" title="Sync status">
+        <span class="tn-status-dot"></span>
         <span id="syncText">Lokaal</span>
       </div>
+      <button class="tn-gear" onclick="openSettingsMenu(this)" aria-label="Menu" id="settingsGearBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+      </button>
     </div>
-  </aside>
-
-  <div class="scrim" id="scrim" onclick="toggleSidebar(false)"></div>
+  </header>
 
   <!-- ─────────── Main ─────────── -->
-  <div class="main">
-    <header class="topbar">
-      <button class="topbar-burger" onclick="toggleSidebar(true)" aria-label="Menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
+  <main class="page-wrap">
+    <header class="page-head">
       <div style="flex:1; min-width:0;">
-        <div class="topbar-title" id="pageTitle">Dashboard</div>
-        <div class="topbar-sub" id="pageSub"></div>
+        <div class="page-title" id="pageTitle">Portfolio</div>
+        <div class="page-sub" id="pageSub"></div>
       </div>
-      <div id="topbarActions"></div>
+      <div class="page-actions" id="pageActions"></div>
     </header>
-    <main class="content" id="content"></main>
+    <div id="content"></div>
+  </main>
+
+  <!-- ─────────── Bottom tab bar (mobile) ─────────── -->
+  <nav class="bottom-tab" id="bottomTab">
+    <a class="bt-item" data-route="portfolio" onclick="navigate('portfolio')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.36 6.36"/></svg>
+      <span class="bt-label">Portfolio</span>
+    </a>
+    <a class="bt-item" data-route="performance" onclick="navigate('performance')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 5 4 4-8 5 10"/></svg>
+      <span class="bt-label">Performance</span>
+    </a>
+    <a class="bt-item" data-route="dividend" onclick="navigate('dividend')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 20V10M12 20V4M18 20v-8"/></svg>
+      <span class="bt-label">Dividend</span>
+    </a>
+    <a class="bt-item" data-route="calendar" onclick="navigate('calendar')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+      <span class="bt-label">Calendar</span>
+    </a>
+    <a class="bt-item" data-route="actions" onclick="navigate('actions')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h13M8 7l4-4M8 7l4 4M16 17H3M16 17l-4-4M16 17l-4 4"/></svg>
+      <span class="bt-label">Actions</span>
+    </a>
+  </nav>
+</div>
+
+<!-- Settings dropdown menu -->
+<div class="modal-bg" id="settingsMenu" onclick="if(event.target===this)closeSettingsMenu()">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <div class="modal-title">Menu</div>
+      <button class="modal-close" onclick="closeSettingsMenu()" aria-label="Sluiten">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:4px;">
+      <a class="sm-item" onclick="closeSettingsMenu();navigate('tickers')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg>
+        Tickers
+      </a>
+      <a class="sm-item" onclick="closeSettingsMenu();navigate('projection')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+        Projectie
+      </a>
+      <a class="sm-item" onclick="closeSettingsMenu();openImportModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        CSV importeren
+      </a>
+      <a class="sm-item" onclick="closeSettingsMenu();refreshAllTickers()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>
+        Refresh koersen (Yahoo)
+      </a>
+      <div style="height:1px; background:var(--border); margin:6px 0;"></div>
+      <a class="sm-item" onclick="closeSettingsMenu();navigate('settings')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/></svg>
+        Instellingen
+      </a>
+    </div>
   </div>
 </div>
 
@@ -741,7 +813,7 @@ window.addEventListener('beforeunload', () => {
 
 function setSync(type, msg) {
   const bar = document.getElementById('syncBar');
-  bar.className = 'sb-sync ' + type;
+  bar.className = 'tn-status ' + type;
   document.getElementById('syncText').textContent = msg;
 }
 
@@ -973,6 +1045,55 @@ function computeRealized() {
   return computeHoldings().reduce((s, h) => s + (h.realizedEur || 0), 0);
 }
 
+/* Net worth (marktwaarde + cash) op een specifieke datum */
+function valueAtDate(isoDate) {
+  const cutoff = isoDate;
+  const holdings = new Map();
+  let cash = 0;
+  pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .filter(t => (t.date || '') <= cutoff).forEach(tx => {
+    const fx = +tx.fx || 1, fee = +tx.fee || 0;
+    if (tx.type === 'storting') cash += (+tx.amount || 0) * fx;
+    else if (tx.type === 'opname') cash -= (+tx.amount || 0) * fx;
+    else if (tx.type === 'koop') {
+      cash -= ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+      const k = (tx.ticker || '').toUpperCase();
+      if (!holdings.has(k)) holdings.set(k, { qty: 0, costEur: 0 });
+      const h = holdings.get(k);
+      h.qty += +tx.qty || 0;
+      h.costEur += ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+    } else if (tx.type === 'verkoop') {
+      cash += ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx;
+      const k = (tx.ticker || '').toUpperCase();
+      const h = holdings.get(k);
+      if (h) {
+        const avg = h.qty > 0 ? h.costEur / h.qty : 0;
+        h.costEur -= avg * (+tx.qty || 0);
+        h.qty -= +tx.qty || 0;
+      }
+    }
+  });
+  pfDividends().filter(d => (d.date || '') <= cutoff).forEach(d => cash += ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)));
+  let marketValue = 0;
+  holdings.forEach((h, k) => {
+    if (Math.abs(h.qty) < 0.000001) return;
+    const tk = getTicker(k);
+    const fx = tk ? fxForCurrency(tk.currency) : 1;
+    const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
+    marketValue += h.qty * priceEur;
+  });
+  return marketValue + cash;
+}
+
+function computeYtd() {
+  const yearStart = `${new Date().getFullYear() - 1}-12-31`;
+  const startVal = valueAtDate(yearStart);
+  const currentVal = portfolioStats().currentValue + computeCash();
+  const abs = currentVal - startVal;
+  const pct = startVal > 0 ? (abs / startVal) * 100 : null;
+  return { start: startVal, current: currentVal, abs, pct };
+}
+
 /* ═══════════════════════════════════════════════════════════
    YAHOO FINANCE INTEGRATION
    ═══════════════════════════════════════════════════════════ */
@@ -1137,52 +1258,78 @@ function portfolioStats() {
    ROUTING
    ═══════════════════════════════════════════════════════════ */
 
+/* Primary routes (top nav + bottom tab). Aliases voor oude hash-namen. */
 const ROUTES = {
-  dashboard: { title: 'Dashboard', render: renderDashboard, actions: () => '' },
-  transactions: { title: 'Transacties', render: renderTransactions, actions: () => `<button class="btn btn-primary" onclick="openTxModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe transactie</button>` },
-  dividends: { title: 'Dividenden', render: renderDividends, actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Dividend toevoegen</button>` },
-  holdings: { title: 'Posities', render: renderHoldings, actions: () => '' },
-  calendar: { title: 'Dividend kalender', render: renderCalendar, actions: () => '' },
-  projection: { title: 'Projectie', render: renderProjection, actions: () => '' },
-  tickers: { title: 'Tickers', render: renderTickers, actions: () => `<button class="btn" onclick="refreshAllTickers()" title="Yahoo Finance ophalen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>Refresh</button> <button class="btn btn-primary" onclick="openTickerModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe ticker</button>` },
-  settings: { title: 'Instellingen', render: renderSettings, actions: () => '' }
+  portfolio:   { title: 'Portfolio',   render: renderDashboard,    actions: () => '' },
+  performance: { title: 'Performance', render: renderProjection,   actions: () => '' },
+  dividend:    { title: 'Dividend',    render: renderDividends,    actions: () => `<button class="btn btn-primary" onclick="openDivModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Toevoegen</button>` },
+  calendar:    { title: 'Calendar',    render: renderCalendar,     actions: () => '' },
+  actions:     { title: 'Actions',     render: renderTransactions, actions: () => `<button class="btn btn-primary" onclick="openTxModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe actie</button>` },
+  /* Secondary routes (accessible via gear menu) */
+  holdings:    { title: 'Posities',    render: renderHoldings,     actions: () => '' },
+  tickers:     { title: 'Tickers',     render: renderTickers,      actions: () => `<button class="btn" onclick="refreshAllTickers()" title="Yahoo Finance ophalen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>Refresh</button> <button class="btn btn-primary" onclick="openTickerModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nieuwe ticker</button>` },
+  projection:  { title: 'Projectie',   render: renderProjection,   actions: () => '' },
+  settings:    { title: 'Instellingen', render: renderSettings,    actions: () => '' }
 };
 
+/* Hash aliases voor backward-compat */
+const ROUTE_ALIASES = {
+  dashboard: 'portfolio',
+  transactions: 'actions',
+  dividends: 'dividend'
+};
+
+const PRIMARY_ROUTES = ['portfolio', 'performance', 'dividend', 'calendar', 'actions'];
+
 function navigate(route) {
-  if (!ROUTES[route]) route = 'dashboard';
+  if (ROUTE_ALIASES[route]) route = ROUTE_ALIASES[route];
+  if (!ROUTES[route]) route = 'portfolio';
   location.hash = '#' + route;
 }
 
 function currentRoute() {
-  const r = (location.hash || '#dashboard').replace('#', '');
-  return ROUTES[r] ? r : 'dashboard';
+  let r = (location.hash || '#portfolio').replace('#', '');
+  if (ROUTE_ALIASES[r]) r = ROUTE_ALIASES[r];
+  return ROUTES[r] ? r : 'portfolio';
 }
 
 function renderAll() {
   const route = currentRoute();
   const def = ROUTES[route];
+  /* Nav highlight (top-nav + bottom-tab) */
+  document.querySelectorAll('.tn-item').forEach(el => el.classList.toggle('active', el.dataset.route === route));
+  document.querySelectorAll('.bt-item').forEach(el => el.classList.toggle('active', el.dataset.route === route));
+  /* Page head */
   document.getElementById('pageTitle').textContent = def.title;
   const pf = activePortfolio();
   document.getElementById('pageSub').textContent = pf ? `Portefeuille: ${pf.name}` : '';
-  document.getElementById('topbarActions').innerHTML = def.actions();
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.route === route));
+  document.getElementById('pageActions').innerHTML = def.actions();
+  /* Render body */
   document.getElementById('content').innerHTML = '';
   def.render();
   renderPortfolioSelect();
-  updateBadges();
-  if (window.innerWidth <= 768) toggleSidebar(false);
+  updateValuePill();
 }
 
-function toggleSidebar(open) {
-  document.getElementById('sidebar').classList.toggle('open', open);
-  document.getElementById('scrim').classList.toggle('open', open);
+function updateValuePill() {
+  const valEl = document.getElementById('valuePillVal');
+  const ytdEl = document.getElementById('valuePillYtd');
+  if (!valEl || !ytdEl) return;
+  const netWorth = portfolioStats().currentValue + computeCash();
+  const ytd = computeYtd();
+  valEl.textContent = fmtEUR(netWorth);
+  if (ytd.pct == null) {
+    ytdEl.className = 'value-pill-ytd';
+    ytdEl.textContent = 'YTD —';
+  } else {
+    const up = ytd.pct >= 0;
+    ytdEl.className = 'value-pill-ytd ' + (up ? 'pos' : 'neg');
+    ytdEl.innerHTML = `YTD <svg class="value-pill-ytd-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">${up ? '<path d="M2 9l4-6 4 6M6 3v8"/>' : '<path d="M2 3l4 6 4-6M6 9V1"/>'}</svg>${up ? '+' : ''}${fmtPct(ytd.pct, 2)}`;
+  }
 }
 
-function updateBadges() {
-  document.getElementById('badgeTx').textContent = pfTransactions().length;
-  document.getElementById('badgeDiv').textContent = pfDividends().length;
-  document.getElementById('badgeHold').textContent = computeHoldings().length;
-}
+function openSettingsMenu() { document.getElementById('settingsMenu').classList.add('open'); }
+function closeSettingsMenu() { document.getElementById('settingsMenu').classList.remove('open'); }
 
 function renderPortfolioSelect() {
   const sel = document.getElementById('pfSelect');
