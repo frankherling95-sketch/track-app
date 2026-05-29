@@ -49,8 +49,9 @@
 
 /* ─────────── Base ─────────── */
 *,*::before,*::after { box-sizing:border-box; }
-html,body { margin:0; padding:0; height:100%; }
+html,body { margin:0; padding:0; height:100%; overflow-x:hidden; max-width:100%; }
 body { font-family:var(--font-sans); background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+.app { max-width:100%; overflow-x:hidden; }
 button { font-family:inherit; }
 
 /* ─────────── App shell ─────────── */
@@ -711,15 +712,30 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   .bottom-tab { display:none !important; }
 }
 /* Extra compressie voor smalle telefoons zodat de top-nav cluster past */
-@media (max-width:400px) {
+@media (max-width:440px) {
   .top-nav { padding:0 10px; gap:6px; }
-  .tn-right { gap:6px; min-width:0; }
-  .tn-pf-select { max-width:84px; padding:5px 6px; font-size:11px; }
+  .tn-right { gap:6px; min-width:0; flex-shrink:1; }
+  .tn-pf-select { max-width:90px; padding:5px 6px; font-size:11px; flex-shrink:1; }
   .tt-input { padding:5px 7px; }
-  .tt-input #ttBtnLabel { font-size:11px; }
+  /* Timetravel icoon-only (label weg) zodat de cluster past */
+  #ttBtnLabel { display:none; }
   .value-pill-val { padding:5px 7px; font-size:11px; }
   .value-pill-ytd { padding:5px 7px; font-size:10px; }
   .tn-gear { padding:4px; }
+}
+/* Bottom-tab compacter zodat 6 tabs echt passen op telefoon (<=440px) */
+@media (max-width:440px) {
+  .bottom-tab { padding:5px 0 calc(5px + env(safe-area-inset-bottom)); }
+  .bt-item { flex:1 1 0; min-width:0; padding:6px 1px; gap:1px; }
+  .bt-item svg { width:20px; height:20px; }
+  .bt-label { font-size:8px; letter-spacing:-0.1px; }
+}
+/* Allerkleinste schermen: YTD-deel van de waarde-pill verbergen */
+@media (max-width:360px) {
+  .tn-pf-select { max-width:74px; }
+  .value-pill-ytd { display:none; }
+  .bt-label { font-size:7.5px; }
+  .bt-item svg { width:19px; height:19px; }
 }
 
 /* utility */
