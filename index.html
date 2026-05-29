@@ -672,9 +672,12 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 /* ─────────── Settings ─────────── */
 .settings-row { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); }
 .settings-row:last-child { border-bottom:none; }
-.settings-label { flex:1; }
+.settings-label { flex:1; min-width:0; }
 .settings-label-title { font-weight:600; font-size:14px; margin-bottom:2px; }
 .settings-label-desc { font-size:12px; color:var(--text-muted); }
+.settings-label-desc code { background:var(--surface2); padding:1px 5px; border-radius:4px; font-size:11px; word-break:break-all; }
+.settings-control { width:220px; flex-shrink:0; }
+.settings-row > .seg, .settings-row > .btn { flex-shrink:0; }
 
 .seg { display:inline-flex; background:var(--surface2); border-radius:8px; padding:3px; gap:2px; }
 .seg-btn { background:transparent; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:500; color:var(--text-muted); cursor:pointer; }
@@ -6159,7 +6162,7 @@ function renderSettings() {
           <div class="settings-label-title">FMP API key (optioneel)</div>
           <div class="settings-label-desc">Vul een gratis Financial Modeling Prep API-key in (250 calls/dag) voor automatische sector/branche/marketCap data voor élke ticker. Gratis aan te maken op <code>site.financialmodelingprep.com/developer</code></div>
         </div>
-        <input class="input" type="password" id="fmpKeyInput" placeholder="abc123..." value="${escapeHtml(localStorage.getItem(LS_FMP_KEY) || '')}" style="width:220px;" onchange="saveFmpKey(this.value)">
+        <input class="input settings-control" type="password" id="fmpKeyInput" placeholder="abc123..." value="${escapeHtml(localStorage.getItem(LS_FMP_KEY) || '')}" onchange="saveFmpKey(this.value)">
       </div>
       <div class="settings-row">
         <div class="settings-label">
