@@ -1737,6 +1737,60 @@ function computeRealized() {
   return computeHoldings().reduce((s, h) => s + (h.realizedEur || 0), 0);
 }
 
+/* Belasting-overzicht per kalenderjaar: gerealiseerde winst (gem. kostprijs),
+   bruto/netto dividend, ingehouden bronbelasting, transactiekosten. */
+function taxReport() {
+  const byYear = {};
+  const yearOf = d => (d || '').slice(0, 4);
+  const ensure = y => byYear[y] || (byYear[y] = { realized: 0, divGross: 0, divTax: 0, divNet: 0, fees: 0 });
+  const map = new Map();
+  pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(tx => {
+    const fx = +tx.fx || 1, fee = +tx.fee || 0, qty = +tx.qty || 0, price = +tx.price || 0;
+    const y = yearOf(tx.date);
+    if (tx.type === 'koop') {
+      const k = (tx.ticker || '').toUpperCase();
+      if (!map.has(k)) map.set(k, { qty: 0, costEur: 0 });
+      const h = map.get(k);
+      h.qty += qty; h.costEur += (qty * price + fee) * fx;
+      if (fee) ensure(y).fees += fee * fx;
+    } else if (tx.type === 'verkoop') {
+      const k = (tx.ticker || '').toUpperCase();
+      const h = map.get(k) || { qty: 0, costEur: 0 };
+      const avg = h.qty > 0 ? h.costEur / h.qty : 0;
+      const realized = (qty * price - fee) * fx - qty * avg;
+      ensure(y).realized += realized;
+      h.costEur -= avg * qty; h.qty -= qty;
+      if (fee) ensure(y).fees += fee * fx;
+    } else if (tx.type === 'broker_fee' || tx.type === 'stamp_duty') {
+      ensure(y).fees += ((+tx.amount || 0) + fee) * fx;
+    }
+  });
+  pfDividends().forEach(d => {
+    const y = yearOf(d.date), fx = +d.fx || 1;
+    const g = (+d.gross || 0) * fx, t = (+d.tax || 0) * fx;
+    const e = ensure(y); e.divGross += g; e.divTax += t; e.divNet += g - t;
+  });
+  return byYear;
+}
+
+function exportTaxCsv() {
+  const data = taxReport();
+  const years = Object.keys(data).sort();
+  if (!years.length) { appToast('Geen data om te exporteren', { type: 'warn' }); return; }
+  let csv = 'Jaar;Gerealiseerde winst/verlies (EUR);Bruto dividend (EUR);Ingehouden bronbelasting (EUR);Netto dividend (EUR);Transactie- en brokerkosten (EUR)\n';
+  years.forEach(y => {
+    const d = data[y];
+    csv += `${y};${d.realized.toFixed(2)};${d.divGross.toFixed(2)};${d.divTax.toFixed(2)};${d.divNet.toFixed(2)};${d.fees.toFixed(2)}\n`;
+  });
+  const pf = activePortfolio();
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `belasting-overzicht-${(pf?.name || 'portfolio').replace(/\s+/g, '-')}-${todayISO()}.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+  appToast('Belasting-CSV gedownload');
+}
+
 /* Net worth (marktwaarde + cash) op een specifieke datum. Cash overgeslagen
    als excludeCashFlows aan staat. */
 function valueAtDate(isoDate) {
@@ -6091,6 +6145,31 @@ function renderSettings() {
         <button class="btn btn-sm" onclick="refreshAllTickers()">Verversen</button>
       </div>
     </div>
+
+    ${(() => {
+      const data = taxReport();
+      const years = Object.keys(data).sort().reverse();
+      if (!years.length) return '';
+      return `<div class="card mb-2" style="margin-bottom:14px;">
+        <div class="card-header"><div class="card-title">Belasting-overzicht</div>
+          <div class="card-actions"><button class="btn btn-sm" onclick="exportTaxCsv()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> CSV</button></div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl" style="min-width:520px;">
+            <thead><tr><th>Jaar</th><th class="num">Gerealiseerd</th><th class="num">Bruto div.</th><th class="num">Bronbelasting</th><th class="num">Netto div.</th><th class="num">Kosten</th></tr></thead>
+            <tbody>${years.map(y => { const d = data[y]; return `<tr>
+              <td class="ticker-cell">${y}</td>
+              <td class="num ${d.realized >= 0 ? 'pos' : 'neg'}">${d.realized >= 0 ? '+' : ''}${fmtEUR(d.realized)}</td>
+              <td class="num">${fmtEUR(d.divGross)}</td>
+              <td class="num neg">${d.divTax > 0 ? '-' + fmtEUR(d.divTax) : '—'}</td>
+              <td class="num pos">${fmtEUR(d.divNet)}</td>
+              <td class="num">${d.fees > 0 ? fmtEUR(d.fees) : '—'}</td>
+            </tr>`; }).join('')}</tbody>
+          </table>
+        </div>
+        <div class="text-muted" style="font-size:11px; margin-top:8px;">Gerealiseerde winst via gemiddelde kostprijs (NL-standaard). Voor je belastingaangifte: dividend-bronbelasting kan verrekenbaar zijn. Controleer altijd met je broker-jaaropgave.</div>
+      </div>`;
+    })()}
 
     <div class="card mb-2" style="margin-bottom:14px;">
       <div class="card-header"><div class="card-title">Synchronisatie</div></div>
