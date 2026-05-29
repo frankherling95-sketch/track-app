@@ -348,6 +348,63 @@ button { font-family:inherit; }
 .act-date-range input:focus { outline:none; }
 .act-date-range-sep { color:var(--text-muted); padding:0 2px; }
 
+/* ─────────── Watchlist search modal ─────────── */
+.wl-search-wrap { position:relative; }
+.wl-search-input {
+  width:100%; padding:14px 14px 14px 44px; font-size:15px;
+  background:var(--surface); border:2px solid var(--border-strong); border-radius:12px;
+  font-family:inherit; color:var(--text); transition:border-color .15s;
+}
+.wl-search-input:focus { outline:none; border-color:var(--mint); }
+.wl-search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--text-muted); pointer-events:none; }
+.wl-search-spinner { position:absolute; right:14px; top:50%; transform:translateY(-50%); width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--mint); border-radius:50%; animation:spin 0.7s linear infinite; display:none; }
+.wl-search-spinner.show { display:block; }
+@keyframes spin { to { transform:translateY(-50%) rotate(360deg); } }
+
+.wl-hint { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+.wl-results-list { display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; padding:4px 0; }
+.wl-result-card {
+  display:grid; grid-template-columns:40px 1fr auto; gap:12px; align-items:center;
+  padding:10px 12px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px;
+  cursor:pointer; transition:border-color .12s, background .12s;
+}
+.wl-result-card:hover { border-color:var(--border-strong); background:var(--surface2); }
+.wl-result-card.keyboard-focus { border-color:var(--mint); background:var(--mint-soft); }
+.wl-result-card .brand-logo, .wl-result-card .brand-initial { width:40px; height:40px; border-radius:8px; }
+.wl-result-card .brand-initial { font-size:12px; }
+.wl-result-info { min-width:0; }
+.wl-result-name { font-weight:600; font-size:14px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wl-result-meta { display:flex; gap:6px; align-items:center; margin-top:3px; font-size:11px; color:var(--text-muted); }
+.wl-result-symbol { font-family:var(--font-mono); font-weight:600; color:var(--text); }
+.wl-result-badge { background:var(--surface2); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:.3px; font-weight:600; }
+.wl-result-badge.crypto { background:rgba(245,194,91,.15); color:var(--gold); }
+.wl-result-badge.etf { background:var(--mint-soft); color:var(--success); }
+
+.wl-selected-card {
+  display:grid; grid-template-columns:48px 1fr auto; gap:14px; align-items:center;
+  padding:14px 16px; background:var(--mint-soft); border:2px solid var(--mint); border-radius:12px;
+  margin-bottom:12px;
+}
+.wl-selected-card .brand-logo, .wl-selected-card .brand-initial { width:48px; height:48px; border-radius:10px; font-size:13px; }
+.wl-selected-name { font-weight:700; font-size:16px; line-height:1.2; }
+.wl-selected-meta { display:flex; gap:6px; align-items:center; margin-top:4px; font-size:12px; color:var(--text-muted); }
+.wl-change-btn { background:transparent; border:none; color:var(--accent); font-weight:600; cursor:pointer; font-family:inherit; font-size:13px; padding:6px 10px; border-radius:6px; }
+.wl-change-btn:hover { background:rgba(15,27,61,.06); }
+
+.wl-quick-picks { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.wl-quick-pick {
+  background:var(--surface2); border:1px solid var(--border); padding:6px 10px;
+  border-radius:6px; cursor:pointer; font-family:var(--font-mono); font-size:12px; font-weight:600;
+  color:var(--text); transition:background .12s;
+}
+.wl-quick-pick:hover { background:var(--surface3); }
+
+.wl-empty-state {
+  text-align:center; padding:30px 16px; color:var(--text-muted); font-size:13px;
+}
+.wl-empty-state svg { width:36px; height:36px; opacity:.4; margin-bottom:8px; }
+
 /* Ticker autocomplete dropdown */
 .tx-ticker-wrap { position:relative; }
 .tx-ticker-dd {
@@ -995,26 +1052,41 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 
 <!-- Watchlist add modal -->
 <div class="modal-bg" id="watchlistModal" onclick="if(event.target===this)closeWatchlistModal()">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-header">
-      <div class="modal-title">Ticker toevoegen aan watchlist</div>
+      <div class="modal-title">Ticker toevoegen</div>
       <button class="modal-close" onclick="closeWatchlistModal()" aria-label="Sluiten">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
-    <div class="modal-grid">
-      <div class="full" style="position:relative;">
-        <label>Ticker / ISIN / Naam</label>
-        <input class="input" id="wlTicker" placeholder="bv. NVDA of Microsoft" autocomplete="off" oninput="watchlistSearch(this.value)" onfocus="watchlistSearch(this.value)">
-        <div id="wlSearchResults" class="autocomplete-dropdown" style="display:none;"></div>
+
+    <!-- Selected confirmation (hidden initially) -->
+    <div id="wlSelectedCard" class="wl-selected-card" style="display:none;"></div>
+
+    <!-- Search -->
+    <div id="wlSearchSection">
+      <div class="wl-search-wrap">
+        <svg class="wl-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="wl-search-input" id="wlSearchInput" placeholder="Zoek op naam, ticker of ISIN…" autocomplete="off" spellcheck="false"
+               oninput="watchlistSearch(this.value)" onkeydown="watchlistKeydown(event)">
+        <div class="wl-search-spinner" id="wlSearchSpinner"></div>
       </div>
-      <div><label>Toegevoegd op</label><input class="input" type="date" id="wlAddedAt"></div>
-      <div><label>Doelkoers (optioneel)</label><input class="input" type="number" step="any" id="wlTarget" placeholder="bv. 250.00"></div>
-      <div class="full"><label>Notitie (optioneel)</label><input class="input" id="wlNote" placeholder="bv. Wachten op pullback"></div>
+      <div class="wl-hint">bv. <strong>Microsoft</strong>, <strong>NVDA</strong>, <strong>US0231351067</strong>, <strong>BTC</strong> · resultaten alleen kiezen vanuit lijst</div>
+      <div class="wl-results-list" id="wlResultsList" style="margin-top:10px;"></div>
     </div>
+
+    <!-- Optional fields (always visible) -->
+    <div style="margin-top:14px;">
+      <div class="modal-grid">
+        <div><label>Toegevoegd op</label><input class="input" type="date" id="wlAddedAt"></div>
+        <div><label>Doelkoers (optioneel)</label><input class="input" type="number" step="any" id="wlTarget" placeholder="bv. 250.00"></div>
+        <div class="full"><label>Notitie (optioneel)</label><input class="input" id="wlNote" placeholder="bv. Wachten op pullback"></div>
+      </div>
+    </div>
+
     <div class="modal-foot">
       <button class="btn" onclick="closeWatchlistModal()">Annuleren</button>
-      <button class="btn btn-primary" onclick="saveWatchlistItem()">Toevoegen</button>
+      <button class="btn btn-primary" id="wlSaveBtn" onclick="saveWatchlistItem()" disabled>Selecteer eerst een ticker</button>
     </div>
   </div>
 </div>
@@ -3012,51 +3084,208 @@ function removeFromWatchlist(id) {
   scheduleSave(); renderWatchlist();
 }
 
-/* Modal */
+/* Modal — geforceerd-via-search om foutieve invoer te voorkomen */
+const WL_QUICK_PICKS = ['NVDA','AAPL','MSFT','AMZN','GOOGL','META','TSLA','ASML.AS','BTC-EUR','ETH-EUR'];
+const WL_TYPE_LABELS = { EQUITY:'Aandeel', ETF:'ETF', MUTUALFUND:'Fonds', CRYPTOCURRENCY:'Crypto', INDEX:'Index' };
+const WL_TYPE_CLS    = { EQUITY:'',       ETF:'etf', MUTUALFUND:'etf',  CRYPTOCURRENCY:'crypto', INDEX:'' };
+
+let _wlSelected = null; /* {symbol, name, exchange, type} */
+let _wlSearchTimer = null;
+let _wlSearchToken = 0;
+let _wlLastResults = [];
+let _wlKbIdx = -1;
+
 function openWatchlistModal() {
-  document.getElementById('wlTicker').value = '';
+  _wlSelected = null;
+  _wlLastResults = [];
+  _wlKbIdx = -1;
+  document.getElementById('wlSearchInput').value = '';
   document.getElementById('wlAddedAt').value = todayISO();
   document.getElementById('wlTarget').value = '';
   document.getElementById('wlNote').value = '';
-  document.getElementById('wlSearchResults').innerHTML = '';
-  document.getElementById('wlSearchResults').style.display = 'none';
+  renderWatchlistSelected();
+  renderWatchlistResults('initial');
+  updateWatchlistSaveBtn();
   document.getElementById('watchlistModal').classList.add('open');
-  setTimeout(() => document.getElementById('wlTicker').focus(), 50);
+  setTimeout(() => document.getElementById('wlSearchInput').focus(), 50);
 }
 function closeWatchlistModal() {
   document.getElementById('watchlistModal').classList.remove('open');
 }
 
-let _wlSearchTimer = null;
+function renderWatchlistSelected() {
+  const card = document.getElementById('wlSelectedCard');
+  if (!_wlSelected) { card.style.display = 'none'; return; }
+  const r = _wlSelected;
+  const fakeTicker = { symbol: r.symbol, name: r.name, type: r.type === 'CRYPTOCURRENCY' ? 'crypto' : (r.type === 'ETF' ? 'etf' : 'stock') };
+  const typeLabel = WL_TYPE_LABELS[r.type] || 'Effect';
+  const typeCls = WL_TYPE_CLS[r.type] || '';
+  card.innerHTML = `
+    ${brandLogoHTML(fakeTicker)}
+    <div class="wl-selected-info">
+      <div class="wl-selected-name">${escapeHtml(r.name || r.symbol)}</div>
+      <div class="wl-selected-meta">
+        <span class="wl-result-symbol">${escapeHtml(r.symbol)}</span>
+        <span class="wl-result-badge ${typeCls}">${typeLabel}</span>
+        ${r.exchange ? `<span>· ${escapeHtml(r.exchange)}</span>` : ''}
+      </div>
+    </div>
+    <button class="wl-change-btn" onclick="watchlistChangeSelection()">Wijzigen</button>
+  `;
+  card.style.display = 'grid';
+  /* Hide search section as well so the user knows pick is confirmed */
+  document.getElementById('wlSearchSection').style.display = 'none';
+}
+
+function watchlistChangeSelection() {
+  _wlSelected = null;
+  document.getElementById('wlSearchSection').style.display = 'block';
+  renderWatchlistSelected();
+  updateWatchlistSaveBtn();
+  document.getElementById('wlSearchInput').value = '';
+  renderWatchlistResults('initial');
+  document.getElementById('wlSearchInput').focus();
+}
+
+function updateWatchlistSaveBtn() {
+  const btn = document.getElementById('wlSaveBtn');
+  if (!btn) return;
+  if (_wlSelected) {
+    btn.disabled = false;
+    btn.textContent = 'Toevoegen aan watchlist';
+  } else {
+    btn.disabled = true;
+    btn.textContent = 'Selecteer eerst een ticker';
+  }
+}
+
+function renderWatchlistResults(state, results) {
+  const wrap = document.getElementById('wlResultsList');
+  if (!wrap) return;
+  if (state === 'initial') {
+    wrap.innerHTML = `<div class="wl-empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <div>Typ een naam of ticker om te zoeken</div>
+      <div class="wl-quick-picks" style="justify-content:center;">
+        ${WL_QUICK_PICKS.map(s => `<button class="wl-quick-pick" onclick="watchlistQuickPick('${s}')">${s}</button>`).join('')}
+      </div>
+    </div>`;
+    return;
+  }
+  if (state === 'loading') {
+    wrap.innerHTML = `<div class="wl-empty-state"><div>Zoeken…</div></div>`;
+    return;
+  }
+  if (state === 'empty') {
+    wrap.innerHTML = `<div class="wl-empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M9 9h.01M15 9h.01M9 16c1-1 2-1 3-1s2 0 3 1"/></svg>
+      <div><strong>Geen resultaten</strong></div>
+      <div style="margin-top:4px;">Probeer een andere zoekterm. Voorbeelden: <strong>Apple</strong>, <strong>AAPL</strong>, <strong>US0378331005</strong>, <strong>iShares</strong></div>
+    </div>`;
+    return;
+  }
+  if (state === 'error') {
+    wrap.innerHTML = `<div class="wl-empty-state">
+      <div><strong>Zoeken werkt nu niet</strong></div>
+      <div style="margin-top:4px;">Yahoo proxy reageert niet. Probeer over enkele seconden opnieuw.</div>
+    </div>`;
+    return;
+  }
+  /* state === 'results' */
+  _wlLastResults = results;
+  wrap.innerHTML = results.map((r, i) => {
+    const fakeTicker = { symbol: r.symbol, name: r.name, type: r.type === 'CRYPTOCURRENCY' ? 'crypto' : (r.type === 'ETF' ? 'etf' : 'stock') };
+    const typeLabel = WL_TYPE_LABELS[r.type] || 'Effect';
+    const typeCls = WL_TYPE_CLS[r.type] || '';
+    return `<div class="wl-result-card ${i === _wlKbIdx ? 'keyboard-focus' : ''}" data-idx="${i}" onclick="watchlistPickResult(${i})">
+      ${brandLogoHTML(fakeTicker)}
+      <div class="wl-result-info">
+        <div class="wl-result-name">${escapeHtml(r.name || r.symbol)}</div>
+        <div class="wl-result-meta">
+          <span class="wl-result-symbol">${escapeHtml(r.symbol)}</span>
+          <span class="wl-result-badge ${typeCls}">${typeLabel}</span>
+          ${r.exchange ? `<span>· ${escapeHtml(r.exchange)}</span>` : ''}
+        </div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><path d="M9 6l6 6-6 6"/></svg>
+    </div>`;
+  }).join('');
+}
+
+function watchlistQuickPick(symbol) {
+  document.getElementById('wlSearchInput').value = symbol;
+  watchlistSearch(symbol);
+}
+
 async function watchlistSearch(query) {
   clearTimeout(_wlSearchTimer);
-  const wrap = document.getElementById('wlSearchResults');
-  if (!query || query.length < 2) { wrap.style.display = 'none'; return; }
+  const q = (query || '').trim();
+  if (q.length < 2) { renderWatchlistResults('initial'); return; }
+  /* show spinner immediately */
+  document.getElementById('wlSearchSpinner').classList.add('show');
   _wlSearchTimer = setTimeout(async () => {
-    if (typeof searchYahooSymbol !== 'function') return;
-    const results = await searchYahooSymbol(query);
-    if (!results || !results.length) { wrap.style.display = 'none'; return; }
-    wrap.innerHTML = results.slice(0, 8).map(r => `
-      <div class="autocomplete-item" onclick="watchlistPickSymbol('${escapeHtml(r.symbol)}', '${escapeHtml((r.name || '').replace(/'/g, '&apos;'))}')">
-        <div class="autocomplete-symbol">${escapeHtml(r.symbol)}</div>
-        <div class="autocomplete-name">${escapeHtml(r.name || '')}${r.exchange ? ` · ${escapeHtml(r.exchange)}` : ''}</div>
-      </div>
-    `).join('');
-    wrap.style.display = 'block';
+    const token = ++_wlSearchToken;
+    try {
+      const results = await yahooSearch(q);
+      if (token !== _wlSearchToken) return; /* stale */
+      _wlKbIdx = -1;
+      if (!results || !results.length) {
+        renderWatchlistResults('empty');
+      } else {
+        renderWatchlistResults('results', results);
+      }
+    } catch (e) {
+      if (token !== _wlSearchToken) return;
+      renderWatchlistResults('error');
+    } finally {
+      if (token === _wlSearchToken) document.getElementById('wlSearchSpinner').classList.remove('show');
+    }
   }, 250);
 }
-function watchlistPickSymbol(symbol, name) {
-  document.getElementById('wlTicker').value = symbol;
-  document.getElementById('wlSearchResults').style.display = 'none';
+
+function watchlistPickResult(idx) {
+  const r = _wlLastResults[idx];
+  if (!r) return;
+  _wlSelected = r;
   /* Pre-create ticker zodat refresh + sparkline werken */
-  const t = ensureTicker(symbol);
-  if (name && !t.name) t.name = name;
+  const t = ensureTicker(r.symbol);
+  if (r.name && !t.name) t.name = r.name;
+  if (r.type === 'CRYPTOCURRENCY') t.type = 'crypto';
+  else if (r.type === 'ETF') t.type = 'etf';
+  if (r.exchange && !t.exchange) t.exchange = r.exchange;
   applyStaticMeta(t);
+  renderWatchlistSelected();
+  updateWatchlistSaveBtn();
+  /* Fetch live price in background */
+  refreshTicker(t).then(() => { /* no-op: data is gebruikt bij save/render */ }).catch(() => {});
+}
+
+function watchlistKeydown(e) {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!_wlLastResults.length) return;
+    if (e.key === 'ArrowDown') _wlKbIdx = (_wlKbIdx + 1) % _wlLastResults.length;
+    else _wlKbIdx = (_wlKbIdx - 1 + _wlLastResults.length) % _wlLastResults.length;
+    renderWatchlistResults('results', _wlLastResults);
+    /* scroll into view */
+    const el = document.querySelector(`#wlResultsList .wl-result-card[data-idx="${_wlKbIdx}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    if (_wlKbIdx >= 0 && _wlLastResults[_wlKbIdx]) {
+      e.preventDefault();
+      watchlistPickResult(_wlKbIdx);
+    } else if (_wlLastResults.length === 1) {
+      e.preventDefault();
+      watchlistPickResult(0);
+    }
+  } else if (e.key === 'Escape') {
+    if (_wlSelected) { watchlistChangeSelection(); e.preventDefault(); }
+  }
 }
 
 function saveWatchlistItem() {
-  const ticker = document.getElementById('wlTicker').value.trim().toUpperCase();
-  if (!ticker) { appToast('Ticker is verplicht', { type: 'error' }); return; }
+  if (!_wlSelected) { appToast('Selecteer eerst een ticker uit de lijst', { type: 'error' }); return; }
+  const ticker = _wlSelected.symbol.toUpperCase();
   /* Duplicate check */
   if (pfWatchlist().some(w => w.ticker.toUpperCase() === ticker)) {
     appToast('Deze ticker staat al in je watchlist', { type: 'warn' });
@@ -3074,10 +3303,9 @@ function saveWatchlistItem() {
     targetPrice,
     createdAt: new Date().toISOString()
   });
-  /* Zorg dat ticker bestaat zodat history-fetch werkt */
+  /* Zorg dat ticker bestaat (al gebeurd bij pick, maar safe) */
   const t = ensureTicker(ticker);
   applyStaticMeta(t);
-  /* Trigger background refresh voor live koers */
   refreshTicker(t).then(() => renderWatchlist()).catch(() => {});
   scheduleSave();
   closeWatchlistModal();
