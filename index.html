@@ -115,10 +115,11 @@ button { font-family:inherit; }
 .bt-item:hover { color:var(--text-muted); }
 .bt-item.active { color:var(--text); }
 .bt-item svg { width:21px; height:21px; flex-shrink:0; }
-.bt-label { font-size:9px; letter-spacing:.1px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bt-label { font-size:8.5px; letter-spacing:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* Smalle telefoons: iets compacter zodat 6 tabs passen */
 @media (max-width:360px) {
   .bt-item svg { width:19px; height:19px; }
+  .bt-item { padding:6px 0; }
   .bt-label { font-size:8px; }
 }
 
@@ -773,7 +774,7 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   <nav class="bottom-tab" id="bottomTab">
     <a class="bt-item" data-route="portfolio" onclick="navigate('portfolio')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.36 6.36"/></svg>
-      <span class="bt-label">Portefeuille</span>
+      <span class="bt-label">Portfolio</span>
     </a>
     <a class="bt-item" data-route="performance" onclick="navigate('performance')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 5 4 4-8 5 10"/></svg>
