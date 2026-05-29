@@ -266,6 +266,14 @@ button { font-family:inherit; }
 .strat-color-dot { width:24px; height:24px; border-radius:6px; flex-shrink:0; }
 .strat-info-name { font-weight:600; font-size:14px; }
 .strat-info-target { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); }
+.strat-bar { position:relative; height:5px; background:var(--surface3); border-radius:3px; margin-top:5px; overflow:visible; }
+.strat-bar-actual { height:100%; border-radius:3px; }
+.strat-bar-target { position:absolute; top:-2px; width:2px; height:9px; background:var(--text); border-radius:1px; }
+.strat-delta { font-size:11px; font-weight:700; font-family:var(--font-mono); }
+.strat-delta.over { color:var(--danger); }
+.strat-delta.under { color:var(--gold); }
+.strat-delta.ok { color:var(--success); }
+.strat-rebal { font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; }
 
 .dt-toggle { display:inline-flex; background:var(--surface2); border-radius:8px; padding:3px; }
 .dt-toggle button { background:transparent; border:none; padding:6px 12px; border-radius:6px; font-family:inherit; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; }
@@ -352,6 +360,18 @@ button { font-family:inherit; }
 .act-date-range input { border:none; background:transparent; padding:7px 8px; font-family:inherit; font-size:13px; color:var(--text); width:130px; }
 .act-date-range input:focus { outline:none; }
 .act-date-range-sep { color:var(--text-muted); padding:0 2px; }
+
+/* ─────────── Stale-prijs banner ─────────── */
+.stale-banner {
+  display:flex; align-items:center; gap:10px; cursor:pointer;
+  background:rgba(245,194,91,.14); border:1px solid var(--gold);
+  color:var(--text); border-radius:10px; padding:10px 14px; margin-bottom:14px;
+  font-size:13px;
+}
+.stale-banner:hover { background:rgba(245,194,91,.22); }
+.stale-banner svg { width:18px; height:18px; color:var(--gold); flex-shrink:0; }
+.stale-banner span { flex:1; }
+.stale-banner .stale-refresh { color:var(--text-muted); width:16px; height:16px; }
 
 /* ─────────── Stock detail modal ─────────── */
 .sd-head { display:grid; grid-template-columns:60px 1fr auto; gap:14px; align-items:center; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border); }
@@ -1936,6 +1956,19 @@ const LS_PORT_COLUMNS = 'herling_dividend_port_columns';
 
 function setPortScope(s) { _portScope = s; renderAll(); }
 
+/* Hoe oud is de oudste koers van een huidige positie (in uren)? null = geen posities/prijzen. */
+function pricesStaleHours() {
+  const held = computeHoldings().map(h => getTicker(h.ticker)).filter(t => t && t.price);
+  if (!held.length) return null;
+  let oldest = null;
+  held.forEach(t => {
+    const ts = t.lastFetchedAt ? new Date(t.lastFetchedAt).getTime() : 0;
+    if (oldest === null || ts < oldest) oldest = ts;
+  });
+  if (oldest === 0) return 9999; /* nooit ververst */
+  return (Date.now() - oldest) / 3600000;
+}
+
 function scopedHoldings() {
   const all = computeHoldings();
   if (_portScope === 'crypto') return all.filter(h => isCrypto(getTicker(h.ticker) || { symbol: h.ticker }));
@@ -2014,7 +2047,15 @@ const PALETTE = ['#00B57E', '#5BB8F5', '#F5C25B', '#9B7BFF', '#E96A6A', '#5BE5C2
 function renderPortfolio() {
   const c = document.getElementById('content');
   if (!c) return;
+  const staleH = pricesStaleHours();
+  const staleBanner = (staleH != null && staleH > 24) ? `
+    <div class="stale-banner" onclick="refreshAllTickers()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      <span>Koersen zijn <strong>${staleH > 9000 ? 'nog niet opgehaald' : Math.round(staleH / 24) + ' dag(en) oud'}</strong> — tik om te verversen</span>
+      <svg class="stale-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5"/></svg>
+    </div>` : '';
   c.innerHTML = `
+    ${staleBanner}
     <div class="port-section">
       <div class="port-tabs" id="portBreakdownTabs">
         ${PORT_BREAKDOWNS.map(b => `<button class="port-tab ${b.key === _portBreakdown ? 'active' : ''}" data-bd="${b.key}" onclick="setPortBreakdown('${b.key}')">${b.label}</button>`).join('')}
@@ -6104,20 +6145,41 @@ function renderSettings() {
         <div class="card-actions"><button class="btn btn-sm" onclick="openStratModal()">+ Nieuwe</button></div>
       </div>
       <div class="strat-list">
-        ${(rawState.strategies || []).map(s => {
-          /* Count tickers + actual % */
-          const totalValue = computeHoldings().reduce((sum, h) => { const tk = getTicker(h.ticker); return sum + valueOfHolding(h, tk); }, 0);
-          const stratValue = computeHoldings().filter(h => getTicker(h.ticker)?.strategyId === s.id).reduce((sum, h) => { const tk = getTicker(h.ticker); return sum + valueOfHolding(h, tk); }, 0);
-          const actualPct = totalValue > 0 ? (stratValue / totalValue) * 100 : 0;
-          return `<div class="strat-row">
-            <div class="strat-color-dot" style="background:${escapeHtml(s.color)}"></div>
-            <div>
-              <div class="strat-info-name">${escapeHtml(s.name)}</div>
-              <div class="strat-info-target">${fmtPct(actualPct, 1)} werkelijk${s.targetPct > 0 ? ` · ${s.targetPct}% target` : ''}</div>
-            </div>
-            <button class="btn btn-sm" onclick="openStratModal('${s.id}')">Bewerk</button>
-          </div>`;
-        }).join('') || '<div class="text-muted" style="padding:10px;">Geen strategieën — klik "+ Nieuwe" om een eigen label toe te voegen.</div>'}
+        ${(() => {
+          const holdings = computeHoldings();
+          const totalValue = holdings.reduce((sum, h) => sum + valueOfHolding(h, getTicker(h.ticker)), 0);
+          const hasTargets = (rawState.strategies || []).some(s => s.targetPct > 0);
+          const rows = (rawState.strategies || []).map(s => {
+            const stratValue = holdings.filter(h => getTicker(h.ticker)?.strategyId === s.id).reduce((sum, h) => sum + valueOfHolding(h, getTicker(h.ticker)), 0);
+            const actualPct = totalValue > 0 ? (stratValue / totalValue) * 100 : 0;
+            const hasTarget = s.targetPct > 0;
+            const delta = hasTarget ? actualPct - s.targetPct : 0;
+            const rebalanceEur = hasTarget ? (s.targetPct / 100 * totalValue - stratValue) : 0;
+            const over = delta > 0.5, under = delta < -0.5;
+            return `<div class="strat-row">
+              <div class="strat-color-dot" style="background:${escapeHtml(s.color)}"></div>
+              <div style="min-width:0;">
+                <div class="strat-info-name">${escapeHtml(s.name)}</div>
+                <div class="strat-info-target">${fmtEUR(stratValue)} · ${fmtPct(actualPct, 1)} werkelijk${hasTarget ? ` van ${s.targetPct}% target` : ''}</div>
+                ${hasTarget ? `<div class="strat-bar"><div class="strat-bar-actual" style="width:${Math.min(100, actualPct)}%; background:${escapeHtml(s.color)};"></div><div class="strat-bar-target" style="left:${Math.min(100, s.targetPct)}%;"></div></div>` : ''}
+              </div>
+              <div style="text-align:right; min-width:90px;">
+                ${hasTarget ? `<div class="strat-delta ${over ? 'over' : under ? 'under' : 'ok'}">${over ? '▲ ' + fmtPct(delta, 1) + ' over' : under ? '▼ ' + fmtPct(Math.abs(delta), 1) + ' onder' : '✓ op target'}</div>
+                ${Math.abs(rebalanceEur) > 1 ? `<div class="strat-rebal">${rebalanceEur > 0 ? 'koop ' : 'verkoop '}${fmtEUR(Math.abs(rebalanceEur))}</div>` : ''}` : ''}
+              </div>
+              <button class="btn btn-sm" onclick="openStratModal('${s.id}')">Bewerk</button>
+            </div>`;
+          }).join('');
+          /* Niet-toegewezen posities */
+          const unassignedVal = holdings.filter(h => { const tk = getTicker(h.ticker); return !tk?.strategyId || !rawState.strategies.find(s => s.id === tk.strategyId); }).reduce((sum, h) => sum + valueOfHolding(h, getTicker(h.ticker)), 0);
+          const unassignedPct = totalValue > 0 ? (unassignedVal / totalValue) * 100 : 0;
+          const unassignedRow = unassignedVal > 1 ? `<div class="strat-row" style="opacity:.75;">
+            <div class="strat-color-dot" style="background:var(--text-hint)"></div>
+            <div><div class="strat-info-name">Geen strategie</div><div class="strat-info-target">${fmtEUR(unassignedVal)} · ${fmtPct(unassignedPct, 1)} werkelijk</div></div>
+            <div></div><div style="width:62px;"></div>
+          </div>` : '';
+          return (rows + unassignedRow) || '<div class="text-muted" style="padding:10px;">Geen strategieën — klik "+ Nieuwe" om een eigen label toe te voegen. Wijs daarna strategieën toe via de ticker-stamdata.</div>';
+        })()}
       </div>
     </div>
 
