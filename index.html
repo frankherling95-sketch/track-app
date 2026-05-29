@@ -412,6 +412,39 @@ button { font-family:inherit; }
 .sd-meta-val { font-weight:600; }
 
 /* ─────────── Watchlist search modal ─────────── */
+/* ─────────── Watchlist responsive (tabel desktop / cards mobiel) ─────────── */
+.wl-cards { display:none; }
+.wl-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:13px 14px; margin-bottom:10px; cursor:pointer; box-shadow:var(--shadow-sm);
+  transition:border-color .12s;
+}
+.wl-card:active { border-color:var(--border-strong); }
+.wl-card-top { display:flex; align-items:center; gap:11px; }
+.wl-card-name { flex:1; min-width:0; }
+.wl-card-name-primary { font-weight:700; font-size:15px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wl-card-name-sub { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wl-card-price { text-align:right; flex-shrink:0; }
+.wl-card-price-cur { font-family:var(--font-display); font-weight:800; font-size:17px; line-height:1.1; }
+.wl-card-price-delta { font-family:var(--font-mono); font-size:12px; font-weight:700; margin-top:2px; }
+.wl-card-mid { display:flex; align-items:flex-end; gap:12px; margin-top:11px; }
+.wl-card-spark { flex:1; min-width:0; }
+.wl-card-spark svg { width:100%; height:36px; }
+.wl-card-30d { text-align:right; flex-shrink:0; font-family:var(--font-mono); font-size:11px; line-height:1.5; }
+.wl-card-foot { display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:9px; border-top:1px solid var(--border); }
+.wl-card-note { flex:1; min-width:0; font-size:12px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wl-card-note.empty { font-style:italic; opacity:.6; }
+.wl-card-actions { display:flex; gap:4px; flex-shrink:0; }
+.wl-card-actions .btn { padding:6px 9px; }
+.wl-card-target { display:inline-block; font-size:10px; padding:1px 6px; border-radius:5px; background:var(--mint-soft); color:var(--success); font-weight:600; margin-left:6px; }
+@media (max-width:768px) {
+  .wl-table-wrap { display:none; }
+  .wl-cards { display:block; }
+  /* Filter-bar watchlist: timeframe-knoppen scrollbaar, refresh rechts */
+  #wlTimeframeSeg { overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch; flex-wrap:nowrap; }
+  #wlTimeframeSeg .seg-btn { white-space:nowrap; flex-shrink:0; }
+}
+
 .wl-search-wrap { position:relative; }
 .wl-search-input {
   width:100%; padding:14px 14px 14px 44px; font-size:15px;
@@ -3896,7 +3929,7 @@ function renderWatchlist() {
       </button>
       <span class="text-muted text-mono" style="font-size:11px;">${lastRefresh ? 'Bijgewerkt ' + lastRefresh : items.length + ' tickers'}</span>
     </div>
-    <div class="tbl-wrap">
+    <div class="tbl-wrap wl-table-wrap">
       <table class="tbl">
         <thead><tr>
           <th>Effect</th>
@@ -3912,74 +3945,89 @@ function renderWatchlist() {
         </tbody>
       </table>
     </div>
+    <div class="wl-cards" id="wlCards">
+      <div class="text-muted" style="padding:24px; text-align:center;">Koersen laden…</div>
+    </div>
   `;
   renderWatchlistRows();
 }
 
 async function renderWatchlistRows() {
   const tbody = document.getElementById('wlTbody');
-  if (!tbody) return;
+  const cardsEl = document.getElementById('wlCards');
+  if (!tbody && !cardsEl) return;
   const items = pfWatchlist();
   /* Fetch alle histories parallel (gecached) */
   const histories = await Promise.all(items.map(it => fetchWatchlistHistory(it.ticker)));
-  const rows = items.map((it, idx) => {
+  /* Bereken per item één keer alle afgeleide waarden */
+  const computed = items.map((it, idx) => {
     const tk = getTicker(it.ticker);
     const quotes = histories[idx];
     const startDate = getWatchlistStartDate(it);
     const startPrice = quotes ? findPriceAtDate(quotes, startDate) : null;
-    /* Huidige koers: bij voorkeur uit ticker stamdata (live refreshed), anders laatste quote */
     const fxRate = tk ? fxForCurrency(tk.currency) : 1;
     let curPriceEur = null;
-    if (tk?.price != null) {
-      curPriceEur = tk.price * fxRate;
-    } else if (quotes && quotes.length) {
-      curPriceEur = quotes[quotes.length - 1].close;
-    }
+    if (tk?.price != null) curPriceEur = tk.price * fxRate;
+    else if (quotes && quotes.length) curPriceEur = quotes[quotes.length - 1].close;
     const startPriceEur = startPrice != null ? (tk?.price && quotes ? startPrice * fxRate * (tk.price / quotes[quotes.length - 1].close) : startPrice) : null;
     const absDelta = (curPriceEur != null && startPriceEur != null) ? (curPriceEur - startPriceEur) : null;
     const pctDelta = (absDelta != null && startPriceEur > 0) ? (absDelta / startPriceEur) * 100 : null;
     const up = (absDelta ?? 0) >= 0;
-    const cls = up ? 'pos' : 'neg';
-    const sign = up ? '+' : '';
-    return `<tr style="cursor:pointer" onclick="if(!event.target.closest('button'))openStockDetail('${escapeHtml(it.ticker)}')">
-      <td>
-        <div class="sec-row-brand">
+    return { it, tk, quotes, curPriceEur, startPriceEur, absDelta, pctDelta, up, s30: sparkline30dStats(quotes) };
+  });
+
+  /* ── Tabel (desktop) ── */
+  if (tbody) {
+    tbody.innerHTML = computed.map(({ it, tk, quotes, curPriceEur, startPriceEur, absDelta, pctDelta, up, s30 }) => {
+      const cls = up ? 'pos' : 'neg', sign = up ? '+' : '';
+      return `<tr style="cursor:pointer" onclick="if(!event.target.closest('button'))openStockDetail('${escapeHtml(it.ticker)}')">
+        <td><div class="sec-row-brand">${brandLogoHTML(tk || { symbol: it.ticker })}
+          <div class="sec-name"><span class="sec-name-primary">${escapeHtml(tk?.name || it.ticker)}</span>
+          <span class="sec-name-secondary">${escapeHtml(it.ticker)}${it.targetPrice ? ` · doel ${fmtEUR(it.targetPrice)}` : ''}</span></div></div></td>
+        <td class="num">${curPriceEur != null ? fmtEUR(curPriceEur) : '<span class="text-muted">—</span>'}</td>
+        <td class="num">${startPriceEur != null ? fmtEUR(startPriceEur) : '<span class="text-muted">—</span>'}</td>
+        <td class="num ${absDelta != null ? cls : ''}">${absDelta != null ? `${sign}${fmtEUR(absDelta)}<br><span style="font-size:11px;">${sign}${fmtPct(pctDelta, 2)}</span>` : '—'}</td>
+        <td>${renderSparkline(quotes)}${s30 ? `<div style="font-size:10px; font-family:var(--font-mono); margin-top:3px; line-height:1.4;"><span class="${s30.pct >= 0 ? 'pos' : 'neg'}" style="font-weight:700;">${s30.pct >= 0 ? '+' : ''}${fmtPct(s30.pct, 1)}</span><span class="text-muted"> · 30d</span><br><span class="text-muted">L ${fmtNum(s30.lo, 2)} · H ${fmtNum(s30.hi, 2)}</span></div>` : ''}</td>
+        <td style="font-size:12px; color:var(--text-muted); max-width:200px;">${escapeHtml(it.note || '')}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-ghost btn-sm" onclick="openStockDetail('${escapeHtml(it.ticker)}')" title="Details"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button class="btn btn-ghost btn-sm" onclick="removeFromWatchlist('${it.id}')" title="Verwijderen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  /* ── Cards (mobiel) ── */
+  if (cardsEl) {
+    cardsEl.innerHTML = computed.map(({ it, tk, quotes, curPriceEur, absDelta, pctDelta, up, s30 }) => {
+      const cls = up ? 'pos' : 'neg', sign = up ? '+' : '';
+      const tfLabel = (WL_TIMEFRAMES.find(t => t.key === _watchlistTimeframe)?.label) || '';
+      return `<div class="wl-card" onclick="if(!event.target.closest('button'))openStockDetail('${escapeHtml(it.ticker)}')">
+        <div class="wl-card-top">
           ${brandLogoHTML(tk || { symbol: it.ticker })}
-          <div class="sec-name">
-            <span class="sec-name-primary">${escapeHtml(tk?.name || it.ticker)}</span>
-            <span class="sec-name-secondary">${escapeHtml(it.ticker)}${it.targetPrice ? ` · doel ${fmtEUR(it.targetPrice)}` : ''}</span>
+          <div class="wl-card-name">
+            <div class="wl-card-name-primary">${escapeHtml(tk?.name || it.ticker)}</div>
+            <div class="wl-card-name-sub">${escapeHtml(it.ticker)}${it.targetPrice ? `<span class="wl-card-target">doel ${fmtEUR(it.targetPrice)}</span>` : ''}</div>
+          </div>
+          <div class="wl-card-price">
+            <div class="wl-card-price-cur">${curPriceEur != null ? fmtEUR(curPriceEur) : '—'}</div>
+            ${absDelta != null ? `<div class="wl-card-price-delta ${cls}">${sign}${fmtPct(pctDelta, 2)} <span style="opacity:.6; font-weight:500;">${escapeHtml(tfLabel)}</span></div>` : ''}
           </div>
         </div>
-      </td>
-      <td class="num">${curPriceEur != null ? fmtEUR(curPriceEur) : '<span class="text-muted">—</span>'}</td>
-      <td class="num">${startPriceEur != null ? fmtEUR(startPriceEur) : '<span class="text-muted">—</span>'}</td>
-      <td class="num ${absDelta != null ? cls : ''}">${absDelta != null ? `${sign}${fmtEUR(absDelta)}<br><span style="font-size:11px;">${sign}${fmtPct(pctDelta, 2)}</span>` : '—'}</td>
-      <td>
-        ${renderSparkline(quotes)}
-        ${(() => {
-          const s = sparkline30dStats(quotes);
-          if (!s) return '';
-          const su = s.pct >= 0;
-          const c = tk?.currency || 'EUR';
-          return `<div style="font-size:10px; font-family:var(--font-mono); margin-top:3px; line-height:1.4;">
-            <span class="${su ? 'pos' : 'neg'}" style="font-weight:700;">${su ? '+' : ''}${fmtPct(s.pct, 1)}</span>
-            <span class="text-muted"> · 30d</span><br>
-            <span class="text-muted">L ${fmtNum(s.lo, 2)} · H ${fmtNum(s.hi, 2)}</span>
-          </div>`;
-        })()}
-      </td>
-      <td style="font-size:12px; color:var(--text-muted); max-width:200px;">${escapeHtml(it.note || '')}</td>
-      <td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openStockDetail('${escapeHtml(it.ticker)}')" title="Details">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="removeFromWatchlist('${it.id}')" title="Verwijderen">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
-        </button>
-      </td>
-    </tr>`;
-  }).join('');
-  tbody.innerHTML = rows;
+        <div class="wl-card-mid">
+          <div class="wl-card-spark">${renderSparkline(quotes)}</div>
+          ${s30 ? `<div class="wl-card-30d"><span class="${s30.pct >= 0 ? 'pos' : 'neg'}" style="font-weight:700;">${s30.pct >= 0 ? '+' : ''}${fmtPct(s30.pct, 1)}</span> <span class="text-muted">30d</span><br><span class="text-muted">L ${fmtNum(s30.lo, 2)}</span><br><span class="text-muted">H ${fmtNum(s30.hi, 2)}</span></div>` : ''}
+        </div>
+        <div class="wl-card-foot">
+          <div class="wl-card-note ${it.note ? '' : 'empty'}">${it.note ? escapeHtml(it.note) : 'Geen notitie'}</div>
+          <div class="wl-card-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openStockDetail('${escapeHtml(it.ticker)}')" title="Details"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+            <button class="btn btn-ghost btn-sm" onclick="removeFromWatchlist('${it.id}')" title="Verwijderen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
 
 function removeFromWatchlist(id) {
