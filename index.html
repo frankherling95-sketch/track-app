@@ -3184,7 +3184,10 @@ function openWatchlistModal() {
   document.getElementById('wlAddedAt').value = todayISO();
   document.getElementById('wlTarget').value = '';
   document.getElementById('wlNote').value = '';
-  renderWatchlistSelected();
+  /* Reset visibility — search section moet altijd open zijn bij modal-open,
+     selected-card moet verborgen zijn (geen carry-over van vorige sessie) */
+  document.getElementById('wlSearchSection').style.display = 'block';
+  document.getElementById('wlSelectedCard').style.display = 'none';
   renderWatchlistResults('initial');
   updateWatchlistSaveBtn();
   document.getElementById('watchlistModal').classList.add('open');
