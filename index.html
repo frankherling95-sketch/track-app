@@ -3775,6 +3775,20 @@ function setWlAutoRefresh(minutes) {
   renderSettings();
 }
 
+/* 30-daagse stats (% verandering, hoog, laag) */
+function sparkline30dStats(quotes) {
+  if (!quotes || quotes.length < 2) return null;
+  const last30 = quotes.slice(-30);
+  const closes = last30.map(q => q.close);
+  const first = closes[0], last = closes[closes.length - 1];
+  return {
+    pct: first > 0 ? ((last - first) / first) * 100 : 0,
+    hi: Math.max(...closes),
+    lo: Math.min(...closes),
+    currency: 'EUR',
+  };
+}
+
 function renderSparkline(quotes) {
   if (!quotes || quotes.length < 2) return '<span class="text-muted" style="font-size:11px;">—</span>';
   const last30 = quotes.slice(-30);
@@ -3782,15 +3796,23 @@ function renderSparkline(quotes) {
   const max = Math.max(...closes);
   const min = Math.min(...closes);
   const range = max - min || 1;
-  const W = 90, H = 28;
-  const pts = last30.map((q, i) => {
-    const x = (i / (last30.length - 1)) * W;
-    const y = H - ((q.close - min) / range) * (H - 2) - 1;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
+  const W = 96, H = 30;
+  const xy = (q, i) => [ (i / (last30.length - 1)) * W, H - ((q.close - min) / range) * (H - 4) - 2 ];
+  const pts = last30.map((q, i) => xy(q, i).map(n => n.toFixed(1)).join(',')).join(' ');
   const up = closes[closes.length - 1] >= closes[0];
   const color = up ? 'var(--success)' : 'var(--danger)';
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  const maxIdx = closes.indexOf(max), minIdx = closes.indexOf(min);
+  const [mxX, mxY] = xy(last30[maxIdx], maxIdx);
+  const [mnX, mnY] = xy(last30[minIdx], minIdx);
+  /* area fill onder de lijn */
+  const areaPts = `0,${H} ${pts} ${W},${H}`;
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;" title="30 dagen">
+    <polygon points="${areaPts}" fill="${color}" opacity="0.10"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${mxX.toFixed(1)}" cy="${mxY.toFixed(1)}" r="1.8" fill="var(--success)"/>
+    <circle cx="${mnX.toFixed(1)}" cy="${mnY.toFixed(1)}" r="1.8" fill="var(--danger)"/>
+    <circle cx="${W}" cy="${xy(last30[last30.length-1], last30.length-1)[1].toFixed(1)}" r="2.2" fill="${color}"/>
+  </svg>`;
 }
 
 function setWatchlistTimeframe(tf) {
@@ -3894,9 +3916,25 @@ async function renderWatchlistRows() {
       <td class="num">${curPriceEur != null ? fmtEUR(curPriceEur) : '<span class="text-muted">—</span>'}</td>
       <td class="num">${startPriceEur != null ? fmtEUR(startPriceEur) : '<span class="text-muted">—</span>'}</td>
       <td class="num ${absDelta != null ? cls : ''}">${absDelta != null ? `${sign}${fmtEUR(absDelta)}<br><span style="font-size:11px;">${sign}${fmtPct(pctDelta, 2)}</span>` : '—'}</td>
-      <td>${renderSparkline(quotes)}</td>
-      <td style="font-size:12px; color:var(--text-muted); max-width:200px;">${escapeHtml(it.note || '')}</td>
       <td>
+        ${renderSparkline(quotes)}
+        ${(() => {
+          const s = sparkline30dStats(quotes);
+          if (!s) return '';
+          const su = s.pct >= 0;
+          const c = tk?.currency || 'EUR';
+          return `<div style="font-size:10px; font-family:var(--font-mono); margin-top:3px; line-height:1.4;">
+            <span class="${su ? 'pos' : 'neg'}" style="font-weight:700;">${su ? '+' : ''}${fmtPct(s.pct, 1)}</span>
+            <span class="text-muted"> · 30d</span><br>
+            <span class="text-muted">L ${fmtNum(s.lo, 2)} · H ${fmtNum(s.hi, 2)}</span>
+          </div>`;
+        })()}
+      </td>
+      <td style="font-size:12px; color:var(--text-muted); max-width:200px;">${escapeHtml(it.note || '')}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openStockDetail('${escapeHtml(it.ticker)}')" title="Details">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
         <button class="btn btn-ghost btn-sm" onclick="removeFromWatchlist('${it.id}')" title="Verwijderen">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
         </button>
