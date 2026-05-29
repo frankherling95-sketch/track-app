@@ -1,5 +1,10 @@
 # Herling Dividend Tracker
 
+> **Workflow (Documentation-Driven):** `docs/` is de single source of truth. Lees vóór elke wijziging
+> `docs/SYSTEM_CONTEXT.md` (wat/waarom), `docs/ARCHITECTURE.md` (hoe), `docs/DATAMODEL.md` (datavormen).
+> Raakt een wijziging architectuur of datamodel → werk EERST de betreffende `.md` bij, dan de code.
+> Outputs beknopt: laat ongewijzigde code weg met `// ... bestaande code ...`.
+
 Single-page dividend & portfolio tracker voor Frank Herling. Single-file HTML SPA, te hosten op GitHub Pages, optionele data-sync via een private GitHub Gist (los van de productivity app).
 
 ## Snel oriënteren
