@@ -348,6 +348,42 @@ button { font-family:inherit; }
 .act-date-range input:focus { outline:none; }
 .act-date-range-sep { color:var(--text-muted); padding:0 2px; }
 
+/* ─────────── Stock detail modal ─────────── */
+.sd-head { display:grid; grid-template-columns:60px 1fr auto; gap:14px; align-items:center; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+.sd-head .brand-logo, .sd-head .brand-initial { width:60px; height:60px; border-radius:12px; font-size:15px; }
+.sd-name { font-family:var(--font-display); font-weight:700; font-size:20px; line-height:1.1; }
+.sd-symbol { font-family:var(--font-mono); font-size:12px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.sd-price-block { text-align:right; }
+.sd-price { font-family:var(--font-display); font-weight:800; font-size:24px; line-height:1.1; }
+.sd-change { font-family:var(--font-mono); font-size:13px; font-weight:600; margin-top:3px; }
+.sd-change.pos { color:var(--success); }
+.sd-change.neg { color:var(--danger); }
+
+.sd-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; margin-bottom:16px; }
+.sd-stat { background:var(--surface2); padding:10px 12px; border-radius:8px; }
+.sd-stat-label { font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); font-weight:700; margin-bottom:3px; }
+.sd-stat-val { font-family:var(--font-mono); font-size:14px; font-weight:700; color:var(--text); }
+
+.sd-chart-wrap { background:var(--surface2); border-radius:10px; padding:14px; margin-bottom:16px; }
+.sd-chart-toolbar { display:flex; gap:4px; margin-bottom:10px; }
+.sd-chart-pill { background:transparent; border:1px solid transparent; padding:4px 10px; border-radius:6px; font-family:inherit; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; }
+.sd-chart-pill:hover { background:var(--surface); color:var(--text); }
+.sd-chart-pill.active { background:var(--surface); color:var(--text); border-color:var(--border-strong); }
+.sd-chart-svg { width:100%; height:auto; display:block; }
+
+.sd-section-title { font-family:var(--font-display); font-weight:700; font-size:14px; margin:18px 0 8px; display:flex; align-items:center; gap:8px; }
+.sd-section-title .text-muted { font-weight:500; font-family:var(--font-mono); font-size:12px; }
+.sd-tx-row { display:grid; grid-template-columns:auto auto 1fr auto; gap:10px; padding:8px 0; align-items:center; font-size:13px; border-bottom:1px solid var(--border); }
+.sd-tx-row:last-child { border-bottom:none; }
+.sd-tx-pill { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+.sd-tx-date { color:var(--text-muted); font-size:11px; font-family:var(--font-mono); white-space:nowrap; }
+.sd-tx-detail { color:var(--text-muted); font-size:12px; }
+.sd-tx-amount { font-family:var(--font-mono); font-weight:600; text-align:right; white-space:nowrap; }
+
+.sd-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; font-size:13px; }
+.sd-meta-key { color:var(--text-muted); }
+.sd-meta-val { font-weight:600; }
+
 /* ─────────── Watchlist search modal ─────────── */
 .wl-search-wrap { position:relative; }
 .wl-search-input {
@@ -1053,6 +1089,27 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
   </div>
 </div>
 
+<!-- Stock detail modal -->
+<div class="modal-bg" id="stockDetailModal" onclick="if(event.target===this)closeStockDetail()">
+  <div class="modal modal-lg" style="max-width:720px;">
+    <div class="modal-header">
+      <div class="modal-title" id="sdModalTitle">Aandeel</div>
+      <button class="modal-close" onclick="closeStockDetail()" aria-label="Sluiten">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="sdBody">
+      <div class="empty" style="padding:40px;">Laden…</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="sdRemoveWlBtn" onclick="sdRemoveFromWatchlist()">Uit watchlist</button>
+      <button class="btn" id="sdAddWlBtn" onclick="sdAddToWatchlist()">+ Watchlist</button>
+      <button class="btn" id="sdEditTickerBtn" onclick="sdEditTicker()">Bewerk stamdata</button>
+      <button class="btn btn-primary" id="sdAddTxBtn" onclick="sdAddTransaction()">+ Mutatie</button>
+    </div>
+  </div>
+</div>
+
 <!-- Watchlist add modal -->
 <div class="modal-bg" id="watchlistModal" onclick="if(event.target===this)closeWatchlistModal()">
   <div class="modal" style="max-width:520px;">
@@ -1292,6 +1349,7 @@ async function saveGist() {
     }
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     setSync('saved', 'Gesynchroniseerd');
+    localStorage.setItem(LS_LAST_GIST_SYNC, new Date().toISOString());
   } catch (e) {
     setSync('error', 'Sync fout: ' + e.message);
     setTimeout(saveGist, 5000);
@@ -1395,6 +1453,22 @@ function ensureTicker(symbol) {
    gebruikte koers), anders fallback naar gecachte Yahoo FX-rate. */
 const LS_FX_CACHE = 'herling_dividend_fx_cache_v1';
 const LS_FMP_KEY = 'herling_dividend_fmp_key';
+const LS_LAST_IMPORT = 'herling_dividend_last_import';
+const LS_LAST_GIST_SYNC = 'herling_dividend_last_gist_sync';
+
+function timeAgo(iso) {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60000) return 'zojuist';
+  const min = Math.round(ms / 60000);
+  if (min < 60) return `${min} min geleden`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} uur geleden`;
+  const days = Math.round(hr / 24);
+  if (days < 31) return `${days} ${days === 1 ? 'dag' : 'dagen'} geleden`;
+  const months = Math.round(days / 30);
+  return `${months} ${months === 1 ? 'maand' : 'maanden'} geleden`;
+}
 
 /* Financial Modeling Prep — gratis tier 250 calls/dag. Geeft sector/industry/
    country/marketCap voor élke ticker wereldwijd. User configureert API key. */
@@ -1971,7 +2045,7 @@ function renderSecTable() {
       const cls = c.color && typeof v === 'number' ? (v > 0 ? 'pos' : v < 0 ? 'neg' : '') : '';
       return `<td class="num ${cls}">${formatted}</td>`;
     }).join('');
-    return `<tr style="cursor:pointer" onclick="openTickerModal('${tk?.id || ''}')">
+    return `<tr style="cursor:pointer" onclick="openStockDetail('${escapeHtml(h.ticker)}')">
       <td>
         <div class="sec-row-brand">
           ${brandLogoHTML(tk || { symbol: h.ticker })}
@@ -2015,7 +2089,7 @@ function renderSecTable() {
         <th>Effect</th><th class="num">Gerealiseerd resultaat</th><th>Verkocht op</th>
       </tr></thead><tbody>${closedSorted.map(h => {
         const tk = getTicker(h.ticker);
-        return `<tr><td><div class="sec-row-brand">${brandLogoHTML(tk || { symbol: h.ticker })}<div class="sec-name"><span class="sec-name-primary">${escapeHtml(tk?.name || h.ticker)}</span><span class="sec-name-secondary">${escapeHtml(h.ticker)}</span></div></div></td>
+        return `<tr style="cursor:pointer" onclick="openStockDetail('${escapeHtml(h.ticker)}')"><td><div class="sec-row-brand">${brandLogoHTML(tk || { symbol: h.ticker })}<div class="sec-name"><span class="sec-name-primary">${escapeHtml(tk?.name || h.ticker)}</span><span class="sec-name-secondary">${escapeHtml(h.ticker)}</span></div></div></td>
         <td class="num ${h.realizedEur >= 0 ? 'pos' : 'neg'}">${h.realizedEur >= 0 ? '+' : ''}${fmtEUR(h.realizedEur)}</td>
         <td>${fmtDate(h.exitDate)}</td></tr>`;
       }).join('')}</tbody></table></div>`;
@@ -2405,6 +2479,13 @@ async function fetchYahooFullData(symbol) {
     lastExDate: lastDiv ? new Date(lastDiv.date * 1000).toISOString().slice(0, 10) : null,
     divCount: last12.length,
     marketCap: meta.marketCap || null,
+    /* Extra meta voor detail-view */
+    dayHigh: meta.regularMarketDayHigh ?? null,
+    dayLow: meta.regularMarketDayLow ?? null,
+    weekHigh52: meta.fiftyTwoWeekHigh ?? null,
+    weekLow52: meta.fiftyTwoWeekLow ?? null,
+    volume: meta.regularMarketVolume ?? null,
+    previousClose: meta.chartPreviousClose ?? meta.previousClose ?? null,
     freq
   };
 }
@@ -2891,6 +2972,315 @@ function updateValuePill() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   STOCK DETAIL MODAL — uitgebreide info per ticker
+   ═══════════════════════════════════════════════════════════ */
+
+const SD_TIMEFRAMES = [
+  { key: '1d',  label: '1D', range: '5d',  interval: '5m' },
+  { key: '5d',  label: '5D', range: '5d',  interval: '15m' },
+  { key: '1m',  label: '1M', range: '1mo', interval: '1d' },
+  { key: '3m',  label: '3M', range: '3mo', interval: '1d' },
+  { key: '6m',  label: '6M', range: '6mo', interval: '1d' },
+  { key: '1y',  label: '1J', range: '1y',  interval: '1d' },
+  { key: '5y',  label: '5J', range: '5y',  interval: '1wk' },
+];
+
+let _sdSymbol = null;
+let _sdTimeframe = '1m';
+let _sdMeta = null; /* cached extended Yahoo meta */
+
+function openStockDetail(symbol) {
+  if (!symbol) return;
+  _sdSymbol = symbol.toUpperCase();
+  _sdTimeframe = '1m';
+  _sdMeta = null;
+  document.getElementById('sdModalTitle').textContent = _sdSymbol;
+  document.getElementById('sdBody').innerHTML = '<div class="empty" style="padding:40px;">Laden…</div>';
+  document.getElementById('stockDetailModal').classList.add('open');
+  renderStockDetail();
+}
+function closeStockDetail() {
+  document.getElementById('stockDetailModal').classList.remove('open');
+  _sdSymbol = null;
+}
+
+function setSdTimeframe(tf) { _sdTimeframe = tf; renderStockDetail(); }
+
+async function renderStockDetail() {
+  if (!_sdSymbol) return;
+  const symbol = _sdSymbol;
+  const t = getTicker(symbol) || { symbol };
+  /* Title with watchlist toggle visibility */
+  const inWatchlist = pfWatchlist().some(w => w.ticker.toUpperCase() === symbol);
+  document.getElementById('sdAddWlBtn').classList.toggle('hidden', inWatchlist);
+  document.getElementById('sdRemoveWlBtn').classList.toggle('hidden', !inWatchlist);
+
+  const body = document.getElementById('sdBody');
+  /* Initial skeleton: render whatever we have from ticker stamdata + transactions instantly */
+  body.innerHTML = renderStockDetailSkeleton(t);
+  /* Then fetch live data and re-render with chart */
+  try {
+    const isCryp = isCrypto(t);
+    if (isCryp) {
+      _sdMeta = await fetchCoinGeckoData(symbol);
+    } else if (!_sdMeta || _sdMeta._symbol !== symbol) {
+      _sdMeta = await fetchYahooFullData(symbol);
+      if (_sdMeta) _sdMeta._symbol = symbol;
+    }
+  } catch (e) { /* keep skeleton */ }
+  body.innerHTML = renderStockDetailFull(t, _sdMeta);
+  /* Chart async */
+  drawStockDetailChart(symbol);
+}
+
+function renderStockDetailSkeleton(t) {
+  const txs = pfTransactions().filter(x => (x.ticker || '').toUpperCase() === _sdSymbol);
+  const divs = pfDividends().filter(d => (d.ticker || '').toUpperCase() === _sdSymbol);
+  return renderStockDetailHeader(t, null) +
+    `<div class="sd-stats"><div class="text-muted" style="padding:10px;">Live data laden…</div></div>` +
+    renderStockDetailChartSection() +
+    renderStockDetailMeta(t) +
+    renderStockDetailTxSection(txs, divs);
+}
+
+function renderStockDetailFull(t, meta) {
+  const txs = pfTransactions().filter(x => (x.ticker || '').toUpperCase() === _sdSymbol);
+  const divs = pfDividends().filter(d => (d.ticker || '').toUpperCase() === _sdSymbol);
+  return renderStockDetailHeader(t, meta) +
+    renderStockDetailStats(t, meta) +
+    renderStockDetailChartSection() +
+    renderStockDetailMeta(t) +
+    renderStockDetailTxSection(txs, divs);
+}
+
+function renderStockDetailHeader(t, meta) {
+  const fxRate = fxForCurrency(t.currency || meta?.currency || 'EUR');
+  const livePrice = meta?.price ?? t.price;
+  const priceEur = livePrice != null ? livePrice * fxRate : null;
+  const prevClose = meta?.previousClose;
+  let changeAbs = null, changePct = null;
+  if (livePrice != null && prevClose != null && prevClose > 0) {
+    changeAbs = (livePrice - prevClose) * fxRate;
+    changePct = ((livePrice - prevClose) / prevClose) * 100;
+  }
+  const up = (changeAbs ?? 0) >= 0;
+  return `<div class="sd-head">
+    ${brandLogoHTML(t)}
+    <div style="min-width:0;">
+      <div class="sd-name">${escapeHtml(t.name || meta?.name || _sdSymbol)}${t.aristocrat ? ' <span style="color:var(--gold);font-size:14px;" title="Aristocrat">♛</span>' : ''}</div>
+      <div class="sd-symbol">
+        <span class="text-mono" style="font-weight:600; color:var(--text);">${escapeHtml(_sdSymbol)}</span>
+        ${t.exchange ? `<span>· ${escapeHtml(t.exchange)}</span>` : ''}
+        ${t.currency ? `<span>· ${escapeHtml(t.currency)}</span>` : ''}
+        ${isCrypto(t) ? '<span class="wl-result-badge crypto">Crypto</span>' : t.type === 'etf' ? '<span class="wl-result-badge etf">ETF</span>' : ''}
+      </div>
+    </div>
+    <div class="sd-price-block">
+      <div class="sd-price">${priceEur != null ? fmtEUR(priceEur) : '—'}</div>
+      ${changePct != null ? `<div class="sd-change ${up ? 'pos' : 'neg'}">${up ? '▲' : '▼'} ${up ? '+' : ''}${fmtEUR(changeAbs)} (${up ? '+' : ''}${fmtPct(changePct, 2)})</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderStockDetailStats(t, meta) {
+  const cur = t.currency || meta?.currency || 'EUR';
+  const fxRate = fxForCurrency(cur);
+  const eurOrNative = (v) => v != null ? fmtNum(v, 2) + ' ' + cur : '—';
+  const stats = [
+    { label: 'Dag laag', val: eurOrNative(meta?.dayLow) },
+    { label: 'Dag hoog', val: eurOrNative(meta?.dayHigh) },
+    { label: '52W laag', val: eurOrNative(meta?.weekLow52) },
+    { label: '52W hoog', val: eurOrNative(meta?.weekHigh52) },
+    { label: 'Volume', val: meta?.volume ? fmtNum(meta.volume, 0) : '—' },
+    { label: 'Market cap', val: meta?.marketCap || t.marketCap ? fmtCompactCurrency((meta?.marketCap || t.marketCap) * (cur === 'EUR' ? 1 : fxRate)) : '—' },
+    { label: 'Dividend/jr', val: t.dps ? fmtNum(t.dps, 2) + ' ' + cur : '—' },
+    { label: 'Yield', val: (t.dps && t.price) ? fmtPct((t.dps / t.price) * 100, 2) : '—' },
+  ];
+  return `<div class="sd-stats">${stats.map(s => `
+    <div class="sd-stat">
+      <div class="sd-stat-label">${s.label}</div>
+      <div class="sd-stat-val">${s.val}</div>
+    </div>`).join('')}</div>`;
+}
+
+function fmtCompactCurrency(eur) {
+  if (eur == null || !isFinite(eur)) return '—';
+  if (eur >= 1e12) return '€ ' + (eur / 1e12).toFixed(2) + 'T';
+  if (eur >= 1e9)  return '€ ' + (eur / 1e9).toFixed(2)  + 'B';
+  if (eur >= 1e6)  return '€ ' + (eur / 1e6).toFixed(1)  + 'M';
+  if (eur >= 1e3)  return '€ ' + (eur / 1e3).toFixed(0)  + 'K';
+  return fmtEUR(eur);
+}
+
+function renderStockDetailChartSection() {
+  return `<div class="sd-chart-wrap">
+    <div class="sd-chart-toolbar">
+      ${SD_TIMEFRAMES.map(tf => `<button class="sd-chart-pill ${tf.key === _sdTimeframe ? 'active' : ''}" onclick="setSdTimeframe('${tf.key}')">${tf.label}</button>`).join('')}
+    </div>
+    <div id="sdChart" style="min-height:160px;">
+      <div class="text-muted" style="padding:30px; text-align:center;">Chart laden…</div>
+    </div>
+  </div>`;
+}
+
+function renderStockDetailMeta(t) {
+  const items = [
+    ['Sector', t.sector || '—'],
+    ['Branche', t.industry || '—'],
+    ['Land', t.country || '—'],
+    ['Type', t.type || '—'],
+    ['Broker', t.broker || '—'],
+    ['Strategie', (rawState.strategies?.find(s => s.id === t.strategyId)?.name) || '—'],
+  ];
+  return `<div class="sd-section-title">Stamdata</div>
+    <div class="sd-meta-grid">
+      ${items.map(([k, v]) => `<div class="sd-meta-key">${k}</div><div class="sd-meta-val">${escapeHtml(String(v))}</div>`).join('')}
+    </div>`;
+}
+
+function renderStockDetailTxSection(txs, divs) {
+  if (!txs.length && !divs.length) return '';
+  const totalQty = txs.reduce((s, t) => s + (t.type === 'koop' ? +t.qty : t.type === 'verkoop' ? -+t.qty : 0), 0);
+  const totalCost = txs.filter(t => t.type === 'koop').reduce((s, t) => s + ((+t.qty || 0) * (+t.price || 0) + (+t.fee || 0)) * (+t.fx || 1), 0);
+  const totalDivNet = divs.reduce((s, d) => s + ((+d.gross - (+d.tax || 0)) * (+d.fx || 1)), 0);
+  let html = `<div class="sd-section-title">Mijn positie <span class="text-muted">${fmtNum(totalQty, 4)} aandelen · kostprijs ${fmtEUR(totalCost)}${totalDivNet > 0 ? ' · ' + fmtEUR(totalDivNet) + ' dividend' : ''}</span></div>`;
+  const rows = [...txs.map(t => ({ ...t, kind: 'tx' })), ...divs.map(d => ({ ...d, kind: 'div' }))]
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, 20);
+  if (!rows.length) return html;
+  html += rows.map(r => {
+    if (r.kind === 'div') {
+      return `<div class="sd-tx-row">
+        <span class="sd-tx-pill type-dividend">Dividend</span>
+        <span class="sd-tx-date">${fmtDate(r.date)}</span>
+        <span class="sd-tx-detail">bruto ${fmtNum(r.gross, 2)} ${escapeHtml(r.currency || '')}</span>
+        <span class="sd-tx-amount pos">+${fmtEUR((r.gross - (r.tax || 0)) * (r.fx || 1))}</span>
+      </div>`;
+    }
+    const eur = ((+r.qty || 0) * (+r.price || 0) + (r.type === 'koop' ? (+r.fee || 0) : -(+r.fee || 0))) * (+r.fx || 1);
+    return `<div class="sd-tx-row">
+      <span class="sd-tx-pill type-${r.type}">${r.type}</span>
+      <span class="sd-tx-date">${fmtDate(r.date)}</span>
+      <span class="sd-tx-detail">${fmtNum(r.qty, 4)} × ${fmtNum(r.price, 2)} ${escapeHtml(r.currency || '')}</span>
+      <span class="sd-tx-amount ${r.type === 'verkoop' ? 'pos' : ''}">${r.type === 'verkoop' ? '+' : '-'}${fmtEUR(Math.abs(eur))}</span>
+    </div>`;
+  }).join('');
+  if (txs.length + divs.length > 20) html += `<div class="text-muted" style="padding:8px 0; font-size:12px;">… nog ${txs.length + divs.length - 20} oudere mutaties</div>`;
+  return html;
+}
+
+async function drawStockDetailChart(symbol) {
+  const tf = SD_TIMEFRAMES.find(t => t.key === _sdTimeframe);
+  if (!tf) return;
+  const wrap = document.getElementById('sdChart');
+  if (!wrap) return;
+  let quotes = null;
+  try {
+    if (isCrypto({ symbol })) {
+      const cgId = CRYPTO_TO_COINGECKO[cryptoSymbolBase(symbol)];
+      if (cgId) {
+        const daysMap = { '1d': 1, '5d': 5, '1m': 30, '3m': 90, '6m': 180, '1y': 365, '5y': 1825 };
+        const days = daysMap[tf.key] || 30;
+        const url = `https://api.coingecko.com/api/v3/coins/${cgId}/market_chart?vs_currency=eur&days=${days}`;
+        const r = await fetch(url);
+        if (r.ok) {
+          const json = await r.json();
+          quotes = (json.prices || []).map(([ts, close]) => ({ date: new Date(ts).toISOString().slice(0, 10), close }));
+        }
+      }
+    } else {
+      /* Yahoo chart with explicit interval */
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${tf.range}&interval=${tf.interval}`;
+      const json = await yahooFetch(url);
+      const result = json?.chart?.result?.[0];
+      if (result) {
+        const ts = result.timestamp || [];
+        const closes = result.indicators?.quote?.[0]?.close || [];
+        quotes = ts.map((t, i) => ({ date: new Date(t * 1000).toISOString().slice(0, 16), close: closes[i] })).filter(p => p.close != null);
+      }
+    }
+  } catch (e) {}
+  if (!quotes || quotes.length < 2) {
+    wrap.innerHTML = '<div class="text-muted" style="padding:30px; text-align:center;">Geen koersdata beschikbaar voor deze periode</div>';
+    return;
+  }
+  /* Draw SVG line */
+  const W = 640, H = 180, P = 32;
+  const max = Math.max(...quotes.map(q => q.close));
+  const min = Math.min(...quotes.map(q => q.close));
+  const range = max - min || 1;
+  const minT = new Date(quotes[0].date).getTime();
+  const maxT = new Date(quotes[quotes.length - 1].date).getTime() || minT + 1;
+  const xs = t => P + ((t - minT) / Math.max(1, maxT - minT)) * (W - P * 1.5);
+  const ys = v => H - P / 2 - ((v - min) / range) * (H - P);
+  const pts = quotes.map(q => `${xs(new Date(q.date).getTime()).toFixed(1)},${ys(q.close).toFixed(1)}`).join(' ');
+  const areaPath = `M ${pts.split(' ')[0]} L ${pts} L ${xs(maxT).toFixed(1)},${H - P / 2} L ${P},${H - P / 2} Z`;
+  const up = quotes[quotes.length - 1].close >= quotes[0].close;
+  const color = up ? 'var(--success)' : 'var(--danger)';
+  let svg = `<svg class="sd-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  /* Y gridlines */
+  for (let i = 0; i <= 3; i++) {
+    const y = P / 2 + (H - P) * (i / 3);
+    const v = max - (range * i / 3);
+    svg += `<line x1="${P}" y1="${y}" x2="${W - 8}" y2="${y}" stroke="currentColor" stroke-opacity="0.08"/>`;
+    svg += `<text x="${P - 6}" y="${y + 3}" text-anchor="end" font-size="9" fill="currentColor" opacity="0.5" font-family="JetBrains Mono">${fmtNum(v, 2)}</text>`;
+  }
+  svg += `<path d="${areaPath}" fill="${color}" opacity="0.12"/>`;
+  svg += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+  /* X-axis labels */
+  [0, Math.floor(quotes.length / 2), quotes.length - 1].forEach(i => {
+    const dt = new Date(quotes[i].date);
+    const label = tf.key === '1d' ? dt.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : fmtDate(quotes[i].date);
+    svg += `<text x="${xs(dt.getTime()).toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.6">${label}</text>`;
+  });
+  svg += '</svg>';
+  /* Period delta */
+  const periodChange = ((quotes[quotes.length - 1].close - quotes[0].close) / quotes[0].close) * 100;
+  const cur = getTicker(symbol)?.currency || 'EUR';
+  wrap.innerHTML = svg + `<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted); margin-top:6px; padding:0 ${P}px;">
+    <span>${fmtNum(quotes[0].close, 2)} ${cur}</span>
+    <span class="${up ? 'pos' : 'neg'}" style="font-weight:700;">${up ? '+' : ''}${fmtPct(periodChange, 2)}</span>
+    <span>${fmtNum(quotes[quotes.length - 1].close, 2)} ${cur}</span>
+  </div>`;
+}
+
+/* Foot button actions */
+function sdAddToWatchlist() {
+  if (!_sdSymbol) return;
+  if (pfWatchlist().some(w => w.ticker.toUpperCase() === _sdSymbol)) return;
+  rawState.watchlists.push({
+    id: uid(), portfolioId: rawState.activePortfolioId,
+    ticker: _sdSymbol, addedAt: todayISO(), note: '', targetPrice: null,
+    createdAt: new Date().toISOString()
+  });
+  scheduleSave();
+  document.getElementById('sdAddWlBtn').classList.add('hidden');
+  document.getElementById('sdRemoveWlBtn').classList.remove('hidden');
+  appToast(`${_sdSymbol} toegevoegd aan watchlist`);
+}
+function sdRemoveFromWatchlist() {
+  if (!_sdSymbol) return;
+  rawState.watchlists = rawState.watchlists.filter(w => w.ticker.toUpperCase() !== _sdSymbol);
+  scheduleSave();
+  document.getElementById('sdAddWlBtn').classList.remove('hidden');
+  document.getElementById('sdRemoveWlBtn').classList.add('hidden');
+  appToast(`${_sdSymbol} verwijderd uit watchlist`);
+}
+function sdEditTicker() {
+  if (!_sdSymbol) return;
+  const t = getTicker(_sdSymbol);
+  if (!t) { appToast('Ticker niet gevonden', { type: 'error' }); return; }
+  closeStockDetail();
+  openTickerModal(t.id);
+}
+function sdAddTransaction() {
+  if (!_sdSymbol) return;
+  closeStockDetail();
+  openTxModal();
+  setTimeout(() => { document.getElementById('txTicker').value = _sdSymbol; }, 100);
+}
+
+/* ═══════════════════════════════════════════════════════════
    WATCHLIST MODULE
    ═══════════════════════════════════════════════════════════ */
 
@@ -3134,7 +3524,7 @@ async function renderWatchlistRows() {
     const up = (absDelta ?? 0) >= 0;
     const cls = up ? 'pos' : 'neg';
     const sign = up ? '+' : '';
-    return `<tr>
+    return `<tr style="cursor:pointer" onclick="if(!event.target.closest('button'))openStockDetail('${escapeHtml(it.ticker)}')">
       <td>
         <div class="sec-row-brand">
           ${brandLogoHTML(tk || { symbol: it.ticker })}
@@ -4199,6 +4589,7 @@ async function commitCsvImport() {
     added++;
   });
   scheduleSave(); closeImportModal(); renderAll();
+  localStorage.setItem(LS_LAST_IMPORT, new Date().toISOString());
   appToast(`${added} geïmporteerd, ${skipped} overgeslagen`);
 }
 
@@ -4343,6 +4734,7 @@ async function commitTradeRepublicImport() {
 
   scheduleSave(); closeImportModal(); renderAll();
   setSync('idle', 'Lokaal');
+  localStorage.setItem(LS_LAST_IMPORT, new Date().toISOString());
   appToast(`${added} geïmporteerd, ${dups} duplicaten, ${skipped} overgeslagen`);
   /* Background: refresh ticker stamdata (price, dps) for nieuwe tickers */
   setTimeout(() => refreshAllTickers(), 800);
@@ -5410,6 +5802,31 @@ function renderSettings() {
             <button class="btn btn-sm" onclick="openStratModal('${s.id}')">Bewerk</button>
           </div>`;
         }).join('') || '<div class="text-muted" style="padding:10px;">Geen strategieën — klik "+ Nieuwe" om een eigen label toe te voegen.</div>'}
+      </div>
+    </div>
+
+    <div class="card mb-2" style="margin-bottom:14px;">
+      <div class="card-header"><div class="card-title">Data status</div></div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Laatste CSV-import</div>
+          <div class="settings-label-desc">${(() => { const t = timeAgo(localStorage.getItem(LS_LAST_IMPORT)); return t ? t + ' · ' + fmtDate(localStorage.getItem(LS_LAST_IMPORT)) : 'Nog niet uitgevoerd'; })()}</div>
+        </div>
+        <button class="btn btn-sm" onclick="openImportModal()">Importeer CSV</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Laatste Gist-sync</div>
+          <div class="settings-label-desc">${(() => { const t = timeAgo(localStorage.getItem(LS_LAST_GIST_SYNC)); return t ? t + ' · ' + fmtDate(localStorage.getItem(LS_LAST_GIST_SYNC)) : (localStorage.getItem(LS_TOKEN_KEY) ? 'Wacht op eerste sync' : 'Niet verbonden'); })()}</div>
+        </div>
+        <span class="text-muted text-mono" style="font-size:11px;">${rawState.transactions.length} tx · ${rawState.dividends.length} div · ${rawState.tickers.length} tickers</span>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Laatste koers-refresh</div>
+          <div class="settings-label-desc">${(() => { const t = timeAgo(localStorage.getItem(LS_YAHOO_LAST)); return t ? t + ' · ' + fmtDate(localStorage.getItem(LS_YAHOO_LAST)) : 'Nog niet uitgevoerd'; })()}</div>
+        </div>
+        <button class="btn btn-sm" onclick="refreshAllTickers()">Verversen</button>
       </div>
     </div>
 
