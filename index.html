@@ -1639,11 +1639,13 @@ function buildValueSeries() {
       if (Math.abs(h.qty) < 0.000001) return;
       invested += h.costEur;
       const tk = getTicker(k);
+      /* Echte historische koers op maand-einde; fallback naar huidige koers */
+      const histEur = priceEurOnDate(k, cutoff);
       const fx = tk ? fxForCurrency(tk.currency) : 1;
-      const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
+      const priceEur = histEur != null ? histEur : (tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0));
       marketValue += h.qty * priceEur;
     });
-    return { date: cutoff, invested, marketValue, cash, total: marketValue + cash };
+    return { date: cutoff, invested, marketValue, cash, total: (isCashFlowExcluded() ? marketValue : marketValue + cash) };
   });
 }
 
@@ -1653,9 +1655,12 @@ function buildValueSeries() {
    Fallback when no stortingen exist: use buys as implicit deposits & sells as implicit withdrawals. */
 function computeMwrr() {
   const today = todayISO();
-  const hasExplicitCash = pfTransactions().some(t => t.type === 'storting' || t.type === 'opname');
+  const excludeCash = isCashFlowExcluded();
+  /* Wanneer cash uitgesloten is, of er geen stortingen zijn: gebruik de securities-pot
+     (aankopen = geld erin, verkopen + dividend = geld eruit/terug). Anders externe cashflows. */
+  const useExternalCash = !excludeCash && pfTransactions().some(t => t.type === 'storting' || t.type === 'opname');
   const flows = [];
-  if (hasExplicitCash) {
+  if (useExternalCash) {
     pfTransactions().forEach(tx => {
       const fx = +tx.fx || 1;
       if (tx.type === 'storting') flows.push({ date: tx.date, amount: -(+tx.amount || 0) * fx });
@@ -1671,7 +1676,7 @@ function computeMwrr() {
   }
   if (!flows.length) return null;
   const s = portfolioStats();
-  const endVal = s.currentValue + computeCash();
+  const endVal = s.currentValue + (useExternalCash ? computeCash() : 0);
   if (endVal <= 0) return null;
   flows.push({ date: today, amount: endVal });
   flows.sort((a, b) => a.date.localeCompare(b.date));
@@ -1694,22 +1699,29 @@ function computeMwrr() {
 
 /* CAGR — simple compound growth from first investment to today */
 function computeCagr() {
+  const excludeCash = isCashFlowExcluded();
   const txs = pfTransactions().filter(t => t.type === 'koop' || t.type === 'storting').slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   if (!txs.length) return null;
   const startD = new Date(txs[0].date);
-  const years = (Date.now() - startD.getTime()) / 31557600000;
+  const years = (getNowDate().getTime() - startD.getTime()) / 31557600000;
   if (years < 0.05) return null;
   const s = portfolioStats();
-  const cash = computeCash();
-  const endVal = s.currentValue + cash;
-  const totalInvested = pfTransactions().reduce((sum, t) => {
-    const fx = +t.fx || 1, fee = +t.fee || 0;
-    if (t.type === 'storting') return sum + (+t.amount || 0) * fx;
-    if (t.type === 'opname') return sum - (+t.amount || 0) * fx;
-    return sum;
-  }, 0) || s.invested;
-  if (totalInvested <= 0 || endVal <= 0) return null;
-  return (Math.pow(endVal / totalInvested, 1 / years) - 1) * 100;
+  let endVal, base;
+  if (excludeCash) {
+    /* securities-only: huidige marktwaarde vs kostprijs van huidige posities */
+    endVal = s.currentValue;
+    base = s.invested;
+  } else {
+    endVal = s.currentValue + computeCash();
+    base = pfTransactions().reduce((sum, t) => {
+      const fx = +t.fx || 1;
+      if (t.type === 'storting') return sum + (+t.amount || 0) * fx;
+      if (t.type === 'opname') return sum - (+t.amount || 0) * fx;
+      return sum;
+    }, 0) || s.invested;
+  }
+  if (base <= 0 || endVal <= 0) return null;
+  return (Math.pow(endVal / base, 1 / years) - 1) * 100;
 }
 
 function computeRealized() {
@@ -1751,8 +1763,10 @@ function valueAtDate(isoDate) {
   holdings.forEach((h, k) => {
     if (Math.abs(h.qty) < 0.000001) return;
     const tk = getTicker(k);
+    /* Historische koers op de cutoff-datum; fallback naar huidige koers, dan kostprijs */
+    const histEur = priceEurOnDate(k, cutoff);
     const fx = tk ? fxForCurrency(tk.currency) : 1;
-    const priceEur = tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0);
+    const priceEur = histEur != null ? histEur : (tk?.price ? tk.price * fx : (h.qty > 0 ? h.costEur / h.qty : 0));
     marketValue += h.qty * priceEur;
   });
   return excludeCash ? marketValue : marketValue + cash;
@@ -1761,9 +1775,22 @@ function valueAtDate(isoDate) {
 function computeYtd() {
   const yearStart = `${new Date().getFullYear() - 1}-12-31`;
   const startVal = valueAtDate(yearStart);
-  const currentVal = portfolioStats().currentValue + computeCash();
-  const abs = currentVal - startVal;
-  const pct = startVal > 0 ? (abs / startVal) * 100 : null;
+  const currentVal = portfolioStats().currentValue + (isCashFlowExcluded() ? 0 : computeCash());
+  /* Rendement via Modified Dietz — telt stortingen/aankopen tijdens het jaar NIET als winst */
+  const pct = modifiedDietzReturn(yearStart);
+  /* Absoluut: marktbeweging = eindwaarde - beginwaarde - netto bijgekocht in periode */
+  let netFlow = 0;
+  pfTransactions().filter(t => (t.date || '') > yearStart && (t.date || '') <= getNowISO()).forEach(tx => {
+    const fx = +tx.fx || 1, fee = +tx.fee || 0;
+    if (isCashFlowExcluded()) {
+      if (tx.type === 'koop') netFlow += ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+      else if (tx.type === 'verkoop') netFlow -= ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx;
+    } else {
+      if (tx.type === 'storting') netFlow += (+tx.amount || 0) * fx;
+      else if (tx.type === 'opname') netFlow -= (+tx.amount || 0) * fx;
+    }
+  });
+  const abs = currentVal - startVal - netFlow;
   return { start: startVal, current: currentVal, abs, pct };
 }
 
@@ -2174,14 +2201,28 @@ function renderPerfRendement() {
 }
 
 function renderPerfSummary() {
-  const startDate = periodStart();
-  const startVal = startDate ? valueAtDate(startDate) : (function () {
+  let startDate = periodStart();
+  if (!startDate) {
     const txs = pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    return txs.length ? valueAtDate(txs[0].date) : 0;
-  })();
-  const curVal = portfolioStats().currentValue + computeCash();
-  const change = curVal - startVal;
-  const pct = startVal > 0 ? (change / startVal) * 100 : null;
+    startDate = txs.length ? txs[0].date : `${new Date().getFullYear()}-01-01`;
+  }
+  const startVal = valueAtDate(startDate);
+  const curVal = portfolioStats().currentValue + (isCashFlowExcluded() ? 0 : computeCash());
+  /* Rendement via Modified Dietz (zuiver, niet vervuild door aankoop-/stortingstiming) */
+  const pct = modifiedDietzReturn(startDate);
+  /* Absolute winst/verlies = marktbeweging = eind - begin - netto bijgekocht */
+  let netFlow = 0;
+  pfTransactions().filter(t => (t.date || '') > startDate && (t.date || '') <= getNowISO()).forEach(tx => {
+    const fx = +tx.fx || 1, fee = +tx.fee || 0;
+    if (isCashFlowExcluded()) {
+      if (tx.type === 'koop') netFlow += ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+      else if (tx.type === 'verkoop') netFlow -= ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx;
+    } else {
+      if (tx.type === 'storting') netFlow += (+tx.amount || 0) * fx;
+      else if (tx.type === 'opname') netFlow -= (+tx.amount || 0) * fx;
+    }
+  });
+  const change = curVal - startVal - netFlow;
   const isLoss = change < 0;
   const turnover = computeRealized();
   document.getElementById('perfSummary').innerHTML = `
@@ -2772,6 +2813,8 @@ async function refreshAllTickers() {
   _refreshInFlight = false;
   scheduleSave(); renderAll();
   appToast(`${ok} bijgewerkt${fail ? `, ${fail} gefaald` : ''}`, { type: fail && !ok ? 'error' : undefined });
+  /* Vernieuw ook historische koersen (forced) zodat YTD + grafieken kloppen */
+  ensureAllHistories(true);
 }
 
 async function refreshSingleTicker(id) {
@@ -2803,6 +2846,123 @@ async function fetchBenchmarkHistory(symbol, range = '1y', forceFetch = false) {
   const data = ts.map((t, i) => ({ date: new Date(t * 1000).toISOString().slice(0, 10), close: closes[i] })).filter(p => p.close != null);
   try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data })); } catch (e) {}
   return data;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HISTORISCHE KOERSEN-LAAG
+   Geeft per ticker de echte koers op een datum in het verleden, in EUR
+   (via historische FX). Zonder deze laag gebruikte de app overal de
+   HUIDIGE koers — wat YTD, de vermogensgrafiek en de benchmark-vergelijking
+   onjuist maakte. Synchrone lookups lezen uit een vooraf-geladen cache.
+   ═══════════════════════════════════════════════════════════ */
+
+const _priceHistCache = new Map(); /* symbol → [{date, close}] native currency, asc */
+const _fxHistCache = new Map();    /* currency → [{date, close}] CUR→EUR multiplier, asc */
+let _historiesLoading = false;
+let _historiesLoadedAt = 0;
+
+/* Binary-ish lookup: laatste entry met date <= iso, anders eerste entry */
+function lookupOnOrBefore(arr, iso) {
+  if (!arr || !arr.length) return null;
+  if (iso < arr[0].date) return arr[0];
+  let lo = 0, hi = arr.length - 1, res = arr[0];
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid].date <= iso) { res = arr[mid]; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  return res;
+}
+
+/* EUR-koers van een ticker op een specifieke datum. null als geen historie geladen. */
+function priceEurOnDate(symbol, iso) {
+  const hist = _priceHistCache.get(symbol);
+  if (!hist || !hist.length) return null;
+  const p = lookupOnOrBefore(hist, iso);
+  if (!p || p.close == null) return null;
+  if (isCrypto({ symbol })) return p.close; /* CoinGecko geeft al EUR */
+  const tk = getTicker(symbol);
+  const cur = tk?.currency || 'EUR';
+  if (cur === 'EUR') return p.close;
+  const fxHist = _fxHistCache.get(cur);
+  const fxOnDate = fxHist ? lookupOnOrBefore(fxHist, iso)?.close : null;
+  const fx = fxOnDate ?? fxForCurrency(cur);
+  return p.close * fx;
+}
+
+async function ensurePriceHistory(symbol) {
+  if (_priceHistCache.has(symbol)) return;
+  let quotes = null;
+  try {
+    if (isCrypto({ symbol })) {
+      const cgId = CRYPTO_TO_COINGECKO[cryptoSymbolBase(symbol)];
+      if (cgId) {
+        const url = `https://api.coingecko.com/api/v3/coins/${cgId}/market_chart?vs_currency=eur&days=365&interval=daily`;
+        const r = await fetch(url);
+        if (r.ok) {
+          const json = await r.json();
+          quotes = (json.prices || []).map(([t, c]) => ({ date: new Date(t).toISOString().slice(0, 10), close: c }));
+        }
+      }
+    } else {
+      quotes = await fetchBenchmarkHistory(symbol, '5y');
+    }
+  } catch (e) {}
+  _priceHistCache.set(symbol, quotes || []);
+}
+
+async function ensureFxHistory(currency) {
+  if (!currency || currency === 'EUR') return;
+  if (_fxHistCache.has(currency)) return;
+  let data = null;
+  try { data = await fetchBenchmarkHistory(`${currency}EUR=X`, '5y'); } catch (e) {}
+  _fxHistCache.set(currency, data || []);
+}
+
+/* Laadt historische koersen + FX voor alle posities (achtergrond). Re-rendert na afloop. */
+async function ensureAllHistories(force = false) {
+  if (_historiesLoading) return;
+  if (!force && _historiesLoadedAt && Date.now() - _historiesLoadedAt < 4 * 3600 * 1000) return;
+  _historiesLoading = true;
+  try {
+    /* Alle tickers die ooit gehouden zijn (open + gesloten) */
+    const symbols = new Set([...computeHoldings(), ...computeClosedHoldings()].map(h => h.ticker));
+    const currencies = new Set();
+    symbols.forEach(s => { const tk = getTicker(s); if (tk?.currency && tk.currency !== 'EUR' && !isCrypto({ symbol: s })) currencies.add(tk.currency); });
+    /* FX eerst (nodig voor prijs-conversie) */
+    for (const c of currencies) { await ensureFxHistory(c); await new Promise(r => setTimeout(r, 200)); }
+    for (const s of symbols) { await ensurePriceHistory(s); await new Promise(r => setTimeout(r, 200)); }
+    _historiesLoadedAt = Date.now();
+    /* Re-render zodat grafieken/YTD de accurate cijfers tonen */
+    renderAll();
+  } finally {
+    _historiesLoading = false;
+  }
+}
+
+/* Periode-rendement — winst exclusief het ingelegde/bijgekochte kapitaal.
+   gain = V1 - V0 - nettoFlow ; rendement = gain / (V0 + nettoFlow).
+   Dit is "Simple Dietz": intuïtief (winst gedeeld door totaal ingezet kapitaal)
+   en niet vervuild door de timing van aankopen/stortingen. */
+function modifiedDietzReturn(startISO) {
+  const endISO = getNowISO();
+  if (startISO >= endISO) return null;
+  const V0 = valueAtDate(startISO);
+  const V1 = portfolioStats().currentValue + (isCashFlowExcluded() ? 0 : computeCash());
+  let F = 0;
+  pfTransactions().filter(t => (t.date || '') > startISO && (t.date || '') <= endISO).forEach(tx => {
+    const fx = +tx.fx || 1, fee = +tx.fee || 0;
+    if (isCashFlowExcluded()) {
+      if (tx.type === 'koop') F += ((+tx.qty || 0) * (+tx.price || 0) + fee) * fx;
+      else if (tx.type === 'verkoop') F -= ((+tx.qty || 0) * (+tx.price || 0) - fee) * fx;
+    } else {
+      if (tx.type === 'storting') F += (+tx.amount || 0) * fx;
+      else if (tx.type === 'opname') F -= (+tx.amount || 0) * fx;
+    }
+  });
+  const denom = V0 + F;
+  if (Math.abs(denom) < 1e-6) return null;
+  return ((V1 - V0 - F) / denom) * 100;
 }
 
 /* ISIN → ticker lookup via Yahoo search. Cached in localStorage. */
@@ -5999,6 +6159,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadGist();
   autoRefreshOnBoot();
   setupWatchlistAutoRefresh();
+  /* Historische koersen op de achtergrond laden voor accurate YTD + grafieken */
+  setTimeout(() => ensureAllHistories(), 2000);
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
