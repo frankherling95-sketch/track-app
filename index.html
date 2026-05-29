@@ -710,6 +710,17 @@ label { display:block; font-size:12px; font-weight:600; color:var(--text-muted);
 @media (min-width:769px) {
   .bottom-tab { display:none !important; }
 }
+/* Extra compressie voor smalle telefoons zodat de top-nav cluster past */
+@media (max-width:400px) {
+  .top-nav { padding:0 10px; gap:6px; }
+  .tn-right { gap:6px; min-width:0; }
+  .tn-pf-select { max-width:84px; padding:5px 6px; font-size:11px; }
+  .tt-input { padding:5px 7px; }
+  .tt-input #ttBtnLabel { font-size:11px; }
+  .value-pill-val { padding:5px 7px; font-size:11px; }
+  .value-pill-ytd { padding:5px 7px; font-size:10px; }
+  .tn-gear { padding:4px; }
+}
 
 /* utility */
 .hidden { display:none !important; }
