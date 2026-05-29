@@ -405,6 +405,9 @@ button { font-family:inherit; }
 }
 .wl-empty-state svg { width:36px; height:36px; opacity:.4; margin-bottom:8px; }
 
+#wlRefreshBtn.spinning svg { animation:spin 1s linear infinite; transform-origin:center; }
+#wlRefreshBtn:disabled { opacity:.6; cursor:wait; }
+
 /* Ticker autocomplete dropdown */
 .tx-ticker-wrap { position:relative; }
 .tx-ticker-dd {
@@ -2702,12 +2705,14 @@ async function refreshSingleTicker(id) {
 
 /* Benchmark historical price fetch (cached 4h) */
 const LS_BENCH_PREFIX = 'herling_dividend_bench_';
-async function fetchBenchmarkHistory(symbol, range = '1y') {
+async function fetchBenchmarkHistory(symbol, range = '1y', forceFetch = false) {
   const cacheKey = `${LS_BENCH_PREFIX}${symbol}_${range}`;
-  try {
-    const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-    if (c && Date.now() - c.ts < 4 * 3600 * 1000) return c.data;
-  } catch (e) {}
+  if (!forceFetch) {
+    try {
+      const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (c && Date.now() - c.ts < 4 * 3600 * 1000) return c.data;
+    } catch (e) {}
+  }
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
   const json = await yahooFetch(url);
   const result = json?.chart?.result?.[0];
@@ -2894,6 +2899,7 @@ let _watchlistCustomDate = null;
 const _wlHistoryCache = new Map(); /* in-memory: symbol → quotes[] */
 
 const WL_TIMEFRAMES = [
+  { key: '1d',  label: '1D',  days: 1 },
   { key: '1w',  label: '1W',  days: 7 },
   { key: '1m',  label: '1M',  days: 30 },
   { key: '3m',  label: '3M',  days: 90 },
@@ -2909,6 +2915,7 @@ function getWatchlistStartDate(item) {
   if (_watchlistCustomDate) return _watchlistCustomDate;
   const today = new Date();
   switch (_watchlistTimeframe) {
+    case '1d':  { const d = new Date(today); d.setDate(d.getDate() - 1);  return d.toISOString().slice(0, 10); }
     case '1w':  { const d = new Date(today); d.setDate(d.getDate() - 7);  return d.toISOString().slice(0, 10); }
     case '1m':  { const d = new Date(today); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10); }
     case '3m':  { const d = new Date(today); d.setDate(d.getDate() - 90); return d.toISOString().slice(0, 10); }
@@ -2929,8 +2936,8 @@ function findPriceAtDate(quotes, isoDate) {
   return closest?.close ?? null;
 }
 
-async function fetchWatchlistHistory(symbol) {
-  if (_wlHistoryCache.has(symbol)) return _wlHistoryCache.get(symbol);
+async function fetchWatchlistHistory(symbol, forceFetch = false) {
+  if (!forceFetch && _wlHistoryCache.has(symbol)) return _wlHistoryCache.get(symbol);
   /* Crypto via CoinGecko (hist), stocks via Yahoo chart (1y range = 4h cache via bench helper) */
   if (isCrypto({ symbol })) {
     const base = cryptoSymbolBase(symbol);
@@ -2946,10 +2953,79 @@ async function fetchWatchlistHistory(symbol) {
       return quotes;
     } catch (e) { _wlHistoryCache.set(symbol, null); return null; }
   }
-  /* Stock/ETF — re-use benchmark fetcher (Yahoo chart endpoint, 4h cache in localStorage) */
-  const quotes = await fetchBenchmarkHistory(symbol, '1y');
+  /* Stock/ETF — re-use benchmark fetcher (Yahoo chart endpoint) */
+  const quotes = await fetchBenchmarkHistory(symbol, '1y', forceFetch);
   _wlHistoryCache.set(symbol, quotes);
   return quotes;
+}
+
+/* Refresh-knop: leeg caches + re-fetch alle watchlist tickers (live prijzen) */
+const LS_WL_LAST_REFRESH = 'herling_dividend_wl_last_refresh';
+let _wlRefreshInFlight = false;
+async function refreshWatchlist() {
+  if (_wlRefreshInFlight) return;
+  _wlRefreshInFlight = true;
+  const btn = document.getElementById('wlRefreshBtn');
+  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
+  const items = pfWatchlist();
+  try {
+    /* Clear caches */
+    items.forEach(it => {
+      _wlHistoryCache.delete(it.ticker);
+      ['1mo', '3mo', '6mo', '1y', '2y', '5y', 'max', 'ytd'].forEach(range => {
+        try { localStorage.removeItem(`${LS_BENCH_PREFIX}${it.ticker}_${range}`); } catch (e) {}
+      });
+    });
+    /* Re-fetch ticker live data + histories parallel met soft rate-limit */
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const t = ensureTicker(it.ticker);
+      await refreshTicker(t);
+      await fetchWatchlistHistory(it.ticker, true);
+      if (i < items.length - 1) await new Promise(r => setTimeout(r, 250));
+    }
+    localStorage.setItem(LS_WL_LAST_REFRESH, new Date().toISOString());
+    scheduleSave();
+    renderWatchlist();
+    appToast(`Watchlist bijgewerkt (${items.length} tickers)`);
+  } finally {
+    _wlRefreshInFlight = false;
+    const b2 = document.getElementById('wlRefreshBtn');
+    if (b2) { b2.disabled = false; b2.classList.remove('spinning'); }
+  }
+}
+
+function watchlistLastRefreshAgo() {
+  const iso = localStorage.getItem(LS_WL_LAST_REFRESH);
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60000) return 'net';
+  const min = Math.round(ms / 60000);
+  if (min < 60) return `${min} min geleden`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} uur geleden`;
+  return `${Math.round(hr / 24)} dagen geleden`;
+}
+
+/* Auto-refresh interval timer */
+let _wlAutoRefreshTimer = null;
+function setupWatchlistAutoRefresh() {
+  if (_wlAutoRefreshTimer) { clearInterval(_wlAutoRefreshTimer); _wlAutoRefreshTimer = null; }
+  const minutes = +(rawState.settings?.wlAutoRefreshMinutes) || 0;
+  if (!minutes) return;
+  _wlAutoRefreshTimer = setInterval(() => {
+    /* Alleen draaien als tab zichtbaar is (geen battery drain) en user heeft watchlist items */
+    if (document.visibilityState !== 'visible') return;
+    if (!pfWatchlist().length) return;
+    refreshWatchlist();
+  }, minutes * 60 * 1000);
+}
+function setWlAutoRefresh(minutes) {
+  rawState.settings = rawState.settings || {};
+  rawState.settings.wlAutoRefreshMinutes = +minutes || 0;
+  scheduleSave();
+  setupWatchlistAutoRefresh();
+  renderSettings();
 }
 
 function renderSparkline(quotes) {
@@ -2996,6 +3072,7 @@ function renderWatchlist() {
     </div></div>`;
     return;
   }
+  const lastRefresh = watchlistLastRefreshAgo();
   c.innerHTML = `
     <div class="filter-bar">
       <div class="seg" id="wlTimeframeSeg">
@@ -3006,7 +3083,11 @@ function renderWatchlist() {
         <input class="input" type="date" id="wlCustomDate" value="${_watchlistCustomDate || ''}" max="${new Date().toISOString().slice(0, 10)}" onchange="setWatchlistCustomDate(this.value)" style="width:auto;">
       </div>
       <span class="spacer"></span>
-      <span class="text-muted text-mono" style="font-size:12px;">${items.length} tickers</span>
+      <button class="btn btn-sm" id="wlRefreshBtn" onclick="refreshWatchlist()" title="Koersen verversen">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.7 9.7 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>
+        Refresh
+      </button>
+      <span class="text-muted text-mono" style="font-size:11px;">${lastRefresh ? 'Bijgewerkt ' + lastRefresh : items.length + ' tickers'}</span>
     </div>
     <div class="tbl-wrap">
       <table class="tbl">
@@ -5293,6 +5374,18 @@ function renderSettings() {
           <button class="seg-btn ${!rawState.settings.autoRefresh ? 'active' : ''}" onclick="setAutoRefresh(false)">Uit</button>
         </div>
       </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Watchlist auto-refresh interval</div>
+          <div class="settings-label-desc">Hoe vaak de watchlist-koersen automatisch worden bijgewerkt terwijl de app open is. Pauzeert als de tab niet zichtbaar is (geen battery drain). Voor 20 tickers ≈ 20 calls per refresh.</div>
+        </div>
+        <div class="seg">
+          <button class="seg-btn ${!(rawState.settings.wlAutoRefreshMinutes) ? 'active' : ''}" onclick="setWlAutoRefresh(0)">Uit</button>
+          <button class="seg-btn ${rawState.settings.wlAutoRefreshMinutes === 15 ? 'active' : ''}" onclick="setWlAutoRefresh(15)">15 min</button>
+          <button class="seg-btn ${rawState.settings.wlAutoRefreshMinutes === 60 ? 'active' : ''}" onclick="setWlAutoRefresh(60)">1 uur</button>
+          <button class="seg-btn ${rawState.settings.wlAutoRefreshMinutes === 240 ? 'active' : ''}" onclick="setWlAutoRefresh(240)">4 uur</button>
+        </div>
+      </div>
     </div>
 
     <div class="card mb-2" style="margin-bottom:14px;">
@@ -5485,6 +5578,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderAll();
   await loadGist();
   autoRefreshOnBoot();
+  setupWatchlistAutoRefresh();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
