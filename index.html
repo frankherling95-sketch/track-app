@@ -2203,10 +2203,45 @@ function renderPerfRendement() {
     <div class="perf-summary" id="perfSummary"></div>
     <div class="perf-bench-row" id="perfBenchRow"></div>
     <div class="card"><div class="chart-wrap" id="perfChart"></div></div>
+    <div class="card" style="margin-top:14px;">
+      <div class="card-header"><div class="card-title">Rendement per periode</div>
+        <div class="seg" id="perfRetMode">
+          <button class="seg-btn ${_perfRetMode === 'simple' ? 'active' : ''}" onclick="setPerfRetMode('simple')" title="Winst gedeeld door ingelegd kapitaal">Op inleg</button>
+          <button class="seg-btn ${_perfRetMode === 'twr' ? 'active' : ''}" onclick="setPerfRetMode('twr')" title="Tijdgewogen — vergelijkbaar met index, timing-neutraal">TWR</button>
+        </div>
+      </div>
+      <div id="perfReturnsGrid"></div>
+      <div class="text-muted" style="font-size:11px; margin-top:8px;">
+        ${_perfRetMode === 'twr'
+          ? '<strong>TWR</strong> (tijdgewogen) negeert de timing van je stortingen/aankopen — dit is wat je 1-op-1 met een index kunt vergelijken.'
+          : '<strong>Op inleg</strong> = winst ÷ ingelegd kapitaal. Intuïtief "hoeveel deed mijn geld", maar beïnvloed door wanneer je instapte.'}
+      </div>
+    </div>
   `;
   renderPerfSummary();
   renderPerfBenchRow();
   renderPerfChart();
+  renderPerfReturnsGrid();
+}
+
+let _perfRetMode = 'twr';
+function setPerfRetMode(m) { _perfRetMode = m; renderPerfRendement(); }
+
+function renderPerfReturnsGrid() {
+  const wrap = document.getElementById('perfReturnsGrid');
+  if (!wrap) return;
+  const data = periodReturnsData();
+  wrap.innerHTML = `<div class="kpi-grid" style="margin-bottom:0; grid-template-columns:repeat(auto-fit,minmax(95px,1fr));">
+    ${data.map(d => {
+      const v = _perfRetMode === 'twr' ? d.twr : d.simple;
+      const cls = v == null ? '' : (v >= 0 ? 'pos' : 'neg');
+      const col = v == null ? 'var(--text-muted)' : (v >= 0 ? 'var(--success)' : 'var(--danger)');
+      return `<div class="kpi" style="padding:12px 14px;">
+        <div class="kpi-label">${d.label}</div>
+        <div class="kpi-value" style="font-size:18px; color:${col};">${v == null ? '—' : (v >= 0 ? '+' : '') + fmtPct(v, 1)}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function renderPerfSummary() {
@@ -2234,13 +2269,18 @@ function renderPerfSummary() {
   const change = curVal - startVal - netFlow;
   const isLoss = change < 0;
   const turnover = computeRealized();
+  const twr = twrReturn(startDate);
   document.getElementById('perfSummary').innerHTML = `
     <div class="perf-summary-row">
-      <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--mint)"></span>Rendement</span>
+      <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--mint)"></span>Rendement (op inleg)</span>
       <span class="perf-summary-val ${isLoss ? 'neg' : 'pos'}">${isLoss ? '' : '+'}${pct == null ? '—' : fmtPct(pct, 2)}</span>
     </div>
     <div class="perf-summary-row">
-      <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--text-muted)"></span>${isLoss ? 'Verlies' : 'Winst'}</span>
+      <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--sky)"></span>TWR (tijdgewogen)<span class="text-muted" style="font-size:11px; font-weight:400;"> · vgl. index</span></span>
+      <span class="perf-summary-val ${twr == null ? '' : (twr >= 0 ? 'pos' : 'neg')}">${twr == null ? '—' : (twr >= 0 ? '+' : '') + fmtPct(twr, 2)}</span>
+    </div>
+    <div class="perf-summary-row">
+      <span class="perf-summary-label"><span class="perf-summary-dot" style="background:var(--text-muted)"></span>${isLoss ? 'Verlies' : 'Winst'} (marktbeweging)</span>
       <span class="perf-summary-val ${isLoss ? 'neg' : 'pos'}">${isLoss ? '' : '+'}${fmtEUR(change)}</span>
     </div>
     <div class="perf-summary-row">
@@ -2287,9 +2327,9 @@ async function renderPerfChart() {
     wrap.innerHTML = '<div class="empty" style="padding:30px;">Te weinig data voor deze periode</div>';
     return;
   }
-  /* Normalize all to %-from-start */
-  const portStart = series[0].total || 1;
-  const portNorm = series.map(p => ({ date: p.date, pct: ((p.total - portStart) / portStart) * 100 }));
+  /* Flow-gecorrigeerde cumulatieve return (TWR) per maand — telt bijgekochte
+     posities/stortingen NIET als rendement, dus 1-op-1 vergelijkbaar met de benchmark */
+  const portNorm = series.map(p => ({ date: p.date, pct: twrReturn(startDate, p.date) ?? 0 }));
   /* Fetch benchmarks */
   const rangeMap = { ytd: '1y', '1m': '3mo', '3m': '6mo', '1y': '1y', '3y': '5y', all: 'max' };
   const range = rangeMap[_perfPeriod] || '1y';
@@ -2972,6 +3012,59 @@ function modifiedDietzReturn(startISO) {
   const denom = V0 + F;
   if (Math.abs(denom) < 1e-6) return null;
   return ((V1 - V0 - F) / denom) * 100;
+}
+
+/* Marktwaarde net vóór een datum (transacties strikt < iso) — voor TWR sub-perioden */
+function valueAtDateBefore(iso) {
+  const d = new Date(iso); d.setDate(d.getDate() - 1);
+  return valueAtDate(d.toISOString().slice(0, 10));
+}
+
+/* Time-Weighted Return — ketent sub-periode-rendementen tussen geldstromen.
+   Standaard maatstaf om met benchmark/index te vergelijken (timing-neutraal). */
+function twrReturn(startISO, endISO) {
+  endISO = endISO || getNowISO();
+  if (!startISO || startISO >= endISO) return null;
+  const excludeCash = isCashFlowExcluded();
+  const isFlowTx = t => excludeCash ? (t.type === 'koop' || t.type === 'verkoop') : (t.type === 'storting' || t.type === 'opname');
+  const flowDates = [...new Set(pfTransactions()
+    .filter(t => isFlowTx(t) && (t.date || '') > startISO && (t.date || '') < endISO)
+    .map(t => t.date))].sort();
+  const breakpoints = [startISO, ...flowDates, endISO];
+  const isNow = endISO === getNowISO();
+  let product = 1, validSegments = 0;
+  for (let i = 0; i < breakpoints.length - 1; i++) {
+    const vStart = valueAtDate(breakpoints[i]);            /* waarde NA flow op segStart */
+    const isLast = (i === breakpoints.length - 2);
+    const vEnd = isLast
+      ? (isNow ? (portfolioStats().currentValue + (excludeCash ? 0 : computeCash())) : valueAtDate(endISO))
+      : valueAtDateBefore(breakpoints[i + 1]);             /* waarde VÓÓR flow op segEnd */
+    if (vStart > 1e-6) { product *= (vEnd / vStart); validSegments++; }
+  }
+  if (!validSegments) return null;
+  return (product - 1) * 100;
+}
+
+/* Standaard periode-startdatums voor de rendementen-grid */
+function periodReturnsData() {
+  const now = getNowDate();
+  const iso = d => d.toISOString().slice(0, 10);
+  const minus = days => { const d = new Date(now); d.setDate(d.getDate() - days); return iso(d); };
+  const firstTx = pfTransactions().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0];
+  const periods = [
+    { label: '1M', start: minus(30) },
+    { label: '3M', start: minus(91) },
+    { label: '6M', start: minus(182) },
+    { label: 'YTD', start: `${now.getFullYear() - 1}-12-31` },
+    { label: '1J', start: minus(365) },
+    { label: '3J', start: minus(365 * 3) },
+    { label: 'Sinds start', start: firstTx ? firstTx.date : null },
+  ];
+  return periods.filter(p => p.start).map(p => ({
+    label: p.label,
+    simple: modifiedDietzReturn(p.start),
+    twr: twrReturn(p.start),
+  }));
 }
 
 /* ISIN → ticker lookup via Yahoo search. Cached in localStorage. */
