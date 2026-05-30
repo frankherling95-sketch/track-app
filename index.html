@@ -1687,6 +1687,28 @@ function fxAtDate(fxHist, isoDate, fallback) {
   return rate || (fallback != null ? fallback : 1);
 }
 
+/* Vul ontbrekende koersen aan voor open posities zonder prijs (bv. refresh deels mislukt
+   door proxy-throttling). Draait stil op de achtergrond bij boot; 2 pogingen per ticker. */
+let _heldPricesEnsured = false;
+async function ensureHeldPrices() {
+  if (_heldPricesEnsured) return;
+  _heldPricesEnsured = true;
+  const seen = new Set();
+  const missing = computeHoldings()
+    .map(h => getTicker(h.ticker))
+    .filter(t => t && t.price == null && !seen.has(t.symbol) && (seen.add(t.symbol), true));
+  if (!missing.length) return;
+  let filled = 0;
+  for (const t of missing) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try { if (await refreshTicker(t)) { filled++; break; } } catch (e) {}
+      await new Promise(r => setTimeout(r, 500));
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  if (filled) { localStorage.setItem(LS_YAHOO_LAST, new Date().toISOString()); scheduleSave(); renderAll(); }
+}
+
 /* Compute current holdings from transactions. Respects timetravel cutoff. */
 function computeHoldings() {
   const cutoff = getNowISO();
@@ -2180,10 +2202,11 @@ function renderPortfolio() {
   const c = document.getElementById('content');
   if (!c) return;
   const staleH = pricesStaleHours();
-  const staleBanner = (staleH != null && staleH > 24) ? `
+  const _missingPx = scopedHoldings().filter(h => { const tk = getTicker(h.ticker); return tk && tk.price == null; }).length;
+  const staleBanner = (_missingPx > 0 || (staleH != null && staleH > 24)) ? `
     <div class="stale-banner" onclick="refreshAllTickers()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-      <span>Koersen zijn <strong>${staleH > 9000 ? 'nog niet opgehaald' : Math.round(staleH / 24) + ' dag(en) oud'}</strong> — tik om te verversen</span>
+      <span>${_missingPx > 0 ? `<strong>${_missingPx} ${_missingPx === 1 ? 'effect' : 'effecten'} zonder koers</strong> — tik om op te halen` : `Koersen zijn <strong>${staleH > 9000 ? 'nog niet opgehaald' : Math.round(staleH / 24) + ' dag(en) oud'}</strong> — tik om te verversen`}</span>
       <svg class="stale-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.7 9.7 0 016.74 2.74L21 8M21 3v5h-5"/></svg>
     </div>` : '';
   c.innerHTML = `
@@ -6650,6 +6673,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderAll();
   await loadGist();
   ensureFxRates();          // live FX-koersen garanderen → correcte EUR-waardering
+  setTimeout(() => ensureHeldPrices(), 1200); // ontbrekende koersen stil aanvullen
   autoRefreshOnBoot();
   setupWatchlistAutoRefresh();
   /* Historische koersen op de achtergrond laden voor accurate YTD + grafieken */
