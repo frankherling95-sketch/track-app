@@ -74,3 +74,41 @@ events/Benzinga zijn vermoedelijk betaald). Exacte endpoint-paden verifiëren vi
 mcp_massive connector vóór de app-integratie. US-data in USD → EUR via Massive-FX.
 
 **Niet doen**: betaalde key direct in de browser of via publieke CORS-proxy zetten (lek).
+
+## 2026-05-30 · Massive geïntegreerd — gratis-tier geverifieerd + gebouwd
+
+**Context**: Worker live op `massiveproxy.frankherling95.workers.dev` (key als Secret).
+Endpoints getest via de Worker om zeker te zijn dat verversen niet achteraf faalt.
+
+**Geverifieerd op gratis tier (status OK)**:
+- Koersen: `GET /v2/aggs/ticker/{sym}/prev` (slotkoers, EOD).
+- **Bulk: `GET /v2/aggs/grouped/locale/us/market/stocks/{date}`** → álle ~12.288
+  US-aandelen in **één** call. Kern van de oplossing.
+- Forex: `GET /v2/aggs/ticker/C:{CUR}EUR/prev` (EUR per 1 unit).
+- Crypto: `GET /v2/aggs/ticker/X:BTCUSD/prev` (USD).
+- Ticker-overview: `GET /v3/reference/tickers/{sym}` (naam, market_cap, sic_description→sector).
+- Dividenden: `GET /stocks/v1/dividends?ticker={sym}` (ex-datum, cash_amount, frequency).
+
+**Betaald (NIET gebruiken)**: `GET /v3/snapshot` (realtime) → `NOT_AUTHORIZED`.
+
+**Rate-limit BEVESTIGD**: ~5 calls/min. 14 calls in 2s → `HTTP 429`. Daarom géén
+per-ticker koers-calls maar **1 grouped-call** voor alle US-aandelen, in-memory +
+localStorage gecached (10 min), plus 60s edge-cache in de Worker.
+
+**Gebouwd in index.html**:
+- `massiveBase()` (leest `LS_MASSIVE_URL`), `massiveFetch()`, `getMassiveGroupedMap()`
+  (1 grouped-call → `Map(sym→USD)`, cache `LS_MV_GROUPED` 10 min), `massiveStockPriceUSD()`,
+  `fetchMassiveFx()`, `fetchMassiveOverview()`.
+- `refreshTicker()` stocks: Massive-prijs primair (alleen als Yahoo USD bevestigt óf valuta
+  onbekend is → voorkomt symbool-collisie met EU-ticker); Massive overview vult sector/
+  marktkap/naam als leeg. Yahoo blijft bron voor dps/ex-div/freq én fallback.
+- `fetchAndCacheFx()`: Massive-forex primair, Yahoo fallback. Crypto blijft CoinGecko.
+- **Fallback-garantie**: élke Massive-fout (429/NOT_AUTHORIZED/netwerk) wordt stil gevangen →
+  app valt terug op Yahoo/CoinGecko. Verversen eindigt dus nooit met een foutmelding.
+- Instellingen → Marktdata: veld "Massive proxy-URL" + "Testen"-knop.
+- Gratis tier = EOD → koersen zijn slotkoersen (geen realtime; prima voor lange-termijn).
+
+**Caveat**: grouped is US-only → EU-tickers (.AS/.DE) komen via Yahoo-fallback.
+
+**Notitie validate.mjs**: bestaande checker is in orde; draai 'm vanuit de `Finance App/`-map
+(`node validate.mjs` leest `index.html` relatief t.o.v. cwd).

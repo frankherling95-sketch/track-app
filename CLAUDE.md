@@ -69,6 +69,8 @@ rawState = {
 | `LS_TOKEN_KEY` = `herling_dividend_gh_token` | GitHub PAT |
 | `LS_GIST_KEY` = `herling_dividend_gist_id` | Gist ID |
 | `LS_BACKUP_KEY` = `herling_dividend_state_v1` | Volledige rawState backup |
+| `LS_MASSIVE_URL` = `herling_dividend_massive_url` | Cloudflare-Worker-URL voor Massive (leeg = uit) |
+| `LS_MV_GROUPED` = `herling_dividend_massive_grouped_v1` | Cache grouped-daily koersmap (10 min) |
 
 ### Save flow
 
@@ -94,6 +96,7 @@ rawState = {
 - **CSV parser** is intern (geen PapaParse) — supports comma/semicolon, quoted fields, BOM.
 - **FX-koers** is per-transactie veld (geen live API). Default 1.0 voor EUR-transacties.
 - **FX-conversie naar EUR voor ticker-prijzen**: `fxForCurrency(currency)` pakt de meest recente fx-koers uit transacties/dividenden van die valuta. Geen rate beschikbaar → 1.0 (waarschijnlijk fout, vul handmatig een transactie met fx in).
+- **Massive marktdata** (optioneel, primair): zet je een Cloudflare-Worker-URL in `LS_MASSIVE_URL` (Instellingen → Marktdata → "Massive proxy-URL"), dan wordt Massive de primaire koers-/FX-bron. Worker (`massive-proxy-worker.js`) houdt de API-key server-side geheim. Gratis tier = end-of-day; rate-limit ~5/min → koersen via **1 grouped-call** (`getMassiveGroupedMap()`, US-aandelen, cache 10 min), FX via `fetchMassiveFx()`, sector/marktkap via `fetchMassiveOverview()`. Élke fout valt stil terug op Yahoo/CoinGecko. **API-key NOOIT in de app/repo** — alleen als Worker-Secret.
 - **Yahoo Finance**: `fetchYahooFullData(symbol)` via CORS-proxy chain (`api.allorigins.win` → `corsproxy.io` → `api.codetabs.com` → `thingproxy.freeboard.io`). Eerst-werkende proxy wordt gecached in `LS_YAHOO_PROXY`. Endpoint: `query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=2y&events=div`. Levert: price, currency, name, dps (som van laatste 12 mnd dividenden), freq (afgeleid uit aantal dividenden per jaar), lastExDate. **Beperking**: chart-endpoint geeft GEEN sector/industry/country — die blijven handmatig. Voor die data zou `quoteSummary` endpoint nodig zijn maar dat vereist een Yahoo-crumb cookie die in de browser niet stabiel werkbaar is.
 
 ## CSV broker presets

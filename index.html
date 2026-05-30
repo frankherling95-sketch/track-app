@@ -1583,6 +1583,8 @@ function ensureTicker(symbol) {
    gebruikte koers), anders fallback naar gecachte Yahoo FX-rate. */
 const LS_FX_CACHE = 'herling_dividend_fx_cache_v1';
 const LS_FMP_KEY = 'herling_dividend_fmp_key';
+const LS_MASSIVE_URL = 'herling_dividend_massive_url';
+const LS_MV_GROUPED = 'herling_dividend_massive_grouped_v1';
 const LS_LAST_IMPORT = 'herling_dividend_last_import';
 const LS_LAST_GIST_SYNC = 'herling_dividend_last_gist_sync';
 
@@ -1629,11 +1631,15 @@ function fxFromCache(currency) {
 }
 async function fetchAndCacheFx(currency) {
   if (!currency || currency === 'EUR') return 1;
-  /* Yahoo FX: <FROM>EUR=X gives EUR per 1 unit of FROM */
-  const symbol = `${currency}EUR=X`;
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
-  const json = await yahooFetch(url);
-  const rate = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+  /* Massive forex eerst (betrouwbaar), anders Yahoo. Resultaat = EUR per 1 unit van currency. */
+  let rate = null;
+  if (massiveBase()) { try { rate = await fetchMassiveFx(currency); } catch (e) {} }
+  if (!rate) {
+    /* Yahoo FX: <FROM>EUR=X gives EUR per 1 unit of FROM */
+    const symbol = `${currency}EUR=X`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+    try { const json = await yahooFetch(url); rate = json?.chart?.result?.[0]?.meta?.regularMarketPrice; } catch (e) {}
+  }
   if (!rate || !isFinite(rate) || rate <= 0) return null;
   try {
     const c = JSON.parse(localStorage.getItem(LS_FX_CACHE) || '{}');
@@ -3068,7 +3074,94 @@ async function fetchYahooMetadata(symbol) {
   };
 }
 
-/* Refresh one ticker. Routes crypto naar CoinGecko, stocks/ETFs naar Yahoo. */
+/* ═══════════════════════════════════════════════════════════
+   MASSIVE MARKTDATA — via gratis Cloudflare Worker proxy
+   Primaire koers- en FX-bron zodra een Worker-URL is ingesteld
+   (Instellingen → Massive). Valt bij ELKE fout stil terug op
+   Yahoo/CoinGecko, zodat verversen nooit met een foutmelding eindigt.
+   Gratis tier = end-of-day (slotkoersen); rate-limit ~5/min → daarom
+   1 bulk-call (grouped daily) voor ALLE US-aandelen i.p.v. per ticker.
+   ═══════════════════════════════════════════════════════════ */
+function massiveBase() {
+  const u = (localStorage.getItem(LS_MASSIVE_URL) || '').trim().replace(/\/+$/, '');
+  return u || null;
+}
+async function massiveFetch(path) {
+  const base = massiveBase();
+  if (!base) throw new Error('no-massive');
+  const r = await fetch(base + path, { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error('massive-http-' + r.status);
+  const j = await r.json();
+  if (j && j.status && /NOT_AUTHORIZED|ERROR/i.test(j.status)) throw new Error('massive-' + j.status);
+  return j;
+}
+/* Recente kalenderdagen (gisteren t/m N terug), nieuwste eerst — om de laatste
+   handelsdag te vinden (markt dicht in weekend/feestdag). */
+function recentDateISOs(n) {
+  const out = [];
+  const base = new Date(getNowISO());
+  for (let i = 1; i <= n; i++) out.push(new Date(base.getTime() - i * 86400000).toISOString().slice(0, 10));
+  return out;
+}
+/* Eén grouped-daily call → Map(symbol → slotkoers USD) voor álle US-aandelen.
+   In-memory + localStorage gecached (10 min) zodat 1 call alle posities dekt. */
+let _mvGrouped = null; /* {ts, date, map:Map} */
+async function getMassiveGroupedMap() {
+  if (!massiveBase()) return null;
+  if (_mvGrouped && Date.now() - _mvGrouped.ts < 10 * 60 * 1000) return _mvGrouped.map;
+  try {
+    const c = JSON.parse(localStorage.getItem(LS_MV_GROUPED) || 'null');
+    if (c && c.entries && Date.now() - c.ts < 10 * 60 * 1000) {
+      _mvGrouped = { ts: c.ts, date: c.date, map: new Map(c.entries) };
+      return _mvGrouped.map;
+    }
+  } catch (e) {}
+  for (const iso of recentDateISOs(6)) {
+    try {
+      const j = await massiveFetch(`/v2/aggs/grouped/locale/us/market/stocks/${iso}?adjusted=true`);
+      const res = j && j.results;
+      if (Array.isArray(res) && res.length) {
+        const m = new Map();
+        res.forEach(row => { if (row.T && row.c != null) m.set(row.T, row.c); });
+        _mvGrouped = { ts: Date.now(), date: iso, map: m };
+        try { localStorage.setItem(LS_MV_GROUPED, JSON.stringify({ ts: Date.now(), date: iso, entries: [...m] })); } catch (e) {}
+        return m;
+      }
+    } catch (e) { /* probeer vorige dag */ }
+  }
+  return null;
+}
+/* Slotkoers (USD) voor een US-symbool uit de grouped-map, of null. */
+async function massiveStockPriceUSD(symbol) {
+  const m = await getMassiveGroupedMap();
+  return (m && m.has(symbol)) ? m.get(symbol) : null;
+}
+/* FX currency→EUR via Massive forex (prev bar van C:<CUR>EUR). null bij fout. */
+async function fetchMassiveFx(currency) {
+  if (!currency || currency === 'EUR') return 1;
+  try {
+    const j = await massiveFetch(`/v2/aggs/ticker/C:${currency}EUR/prev?adjusted=true`);
+    const c = j?.results?.[0]?.c;
+    return (c && isFinite(c) && c > 0) ? c : null;
+  } catch (e) { return null; }
+}
+/* Ticker-overview: naam, marktkap, sector (uit SIC), valuta. null bij fout. */
+function titleCaseSic(s) { return String(s).toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
+async function fetchMassiveOverview(symbol) {
+  try {
+    const j = await massiveFetch(`/v3/reference/tickers/${encodeURIComponent(symbol)}`);
+    const r = j?.results;
+    if (!r) return null;
+    return {
+      name: r.name || null,
+      marketCap: r.market_cap || null,
+      sector: r.sic_description ? titleCaseSic(r.sic_description) : null,
+      currency: r.currency_name ? r.currency_name.toUpperCase() : null,
+    };
+  } catch (e) { return null; }
+}
+
+/* Refresh one ticker. Routes crypto naar CoinGecko, stocks/ETFs naar Massive→Yahoo. */
 async function refreshTicker(symbolOrTicker) {
   const t = typeof symbolOrTicker === 'string' ? getTicker(symbolOrTicker) : symbolOrTicker;
   if (!t) return false;
@@ -3079,7 +3172,21 @@ async function refreshTicker(symbolOrTicker) {
     if (ok) applyStaticMeta(t); /* alleen voor extra fields */
     return ok;
   }
-  /* Stocks/ETFs: Yahoo */
+  /* Stocks/ETFs: Massive (primair, EOD) → Yahoo (fallback + dividenden/meta) */
+  let mvPrice = null;
+  if (massiveBase()) {
+    try { mvPrice = await massiveStockPriceUSD(t.symbol); } catch (e) {}
+    if (!t.sector || t.marketCap == null || !t.name) {
+      try {
+        const ov = await fetchMassiveOverview(t.symbol);
+        if (ov) {
+          if (ov.sector && !t.sector) t.sector = ov.sector;
+          if (ov.marketCap != null && t.marketCap == null) t.marketCap = ov.marketCap;
+          if (ov.name && !t.name) t.name = ov.name;
+        }
+      } catch (e) {}
+    }
+  }
   const data = await fetchYahooFullData(t.symbol);
   /* Probeer FMP voor sector/industry als user een key heeft, anders Yahoo quoteSummary */
   const fmpKey = localStorage.getItem(LS_FMP_KEY);
@@ -3108,18 +3215,25 @@ async function refreshTicker(symbolOrTicker) {
   }
   /* Statische fallback voor velden die nog niet gevuld zijn */
   applyStaticMeta(t);
-  if (!data) return false;
-  /* Price + currency must stay paired — always refresh together when Yahoo returns price */
-  if (data.price != null) {
+  if (!data && mvPrice == null) return false;
+  /* Prijs: Massive primair (USD, EOD) wanneer Yahoo USD bevestigt of valuta nog
+     onbekend is (voorkomt symbool-collisie met een EU-ticker); anders Yahoo. */
+  const mvUsable = mvPrice != null && (data?.currency ? data.currency === 'USD' : (!t.currency || t.currency === 'USD'));
+  if (mvUsable) {
+    t.price = mvPrice;
+    t.currency = 'USD';
+  } else if (data && data.price != null) {
     t.price = data.price;
     if (data.currency) t.currency = data.currency;
   }
-  if (data.name && !t.name) t.name = data.name;
-  if (data.dps != null) t.dps = data.dps;
-  if (data.lastExDate) t.exDate = data.lastExDate;
-  if (data.freq) t.freq = data.freq;
-  if (data.marketCap != null) t.marketCap = data.marketCap;
-  if (data.exchange) t.exchange = data.exchange;
+  if (data) {
+    if (data.name && !t.name) t.name = data.name;
+    if (data.dps != null) t.dps = data.dps;
+    if (data.lastExDate) t.exDate = data.lastExDate;
+    if (data.freq) t.freq = data.freq;
+    if (data.marketCap != null) t.marketCap = data.marketCap;
+    if (data.exchange) t.exchange = data.exchange;
+  }
   t.lastFetchedAt = new Date().toISOString();
   return true;
 }
@@ -6410,6 +6524,16 @@ function renderSettings() {
           <button class="seg-btn ${rawState.settings.wlAutoRefreshMinutes === 240 ? 'active' : ''}" onclick="setWlAutoRefresh(240)">4 uur</button>
         </div>
       </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="settings-label-title">Massive proxy-URL (Cloudflare Worker)</div>
+          <div class="settings-label-desc">Worker-URL die je Massive-key veilig server-side bewaart. Ingevuld → Massive wordt de primaire koers- en FX-bron (slotkoersen, end-of-day) met 1 bulk-call voor alle US-aandelen; Yahoo/CoinGecko blijven automatische fallback. ${massiveBase() ? '<span style="color:var(--success)">Actief</span>' : 'Nog niet ingesteld'}</div>
+        </div>
+        <button class="btn settings-control" onclick="testMassiveUrl()">Testen</button>
+      </div>
+      <div class="settings-row">
+        <input class="input settings-control" type="url" id="massiveUrlInput" placeholder="https://massiveproxy.&lt;jij&gt;.workers.dev" value="${escapeHtml(localStorage.getItem(LS_MASSIVE_URL) || '')}" onchange="saveMassiveUrl(this.value)">
+      </div>
     </div>
 
     <div class="card mb-2" style="margin-bottom:14px;">
@@ -6586,6 +6710,25 @@ function saveFmpKey(v) {
   const k = (v || '').trim();
   if (k) localStorage.setItem(LS_FMP_KEY, k); else localStorage.removeItem(LS_FMP_KEY);
   appToast(k ? 'FMP-key opgeslagen — refresh tickers voor sector-data' : 'FMP-key verwijderd');
+}
+function saveMassiveUrl(v) {
+  const u = (v || '').trim().replace(/\/+$/, '');
+  if (u) localStorage.setItem(LS_MASSIVE_URL, u); else localStorage.removeItem(LS_MASSIVE_URL);
+  _mvGrouped = null; try { localStorage.removeItem(LS_MV_GROUPED); } catch (e) {}
+  appToast(u ? 'Massive proxy-URL opgeslagen — refresh tickers voor koersen' : 'Massive proxy-URL verwijderd');
+  renderSettings();
+}
+async function testMassiveUrl() {
+  if (!massiveBase()) { appToast('Vul eerst een proxy-URL in', { type: 'warn' }); return; }
+  appToast('Massive testen…');
+  try {
+    const j = await massiveFetch('/v2/aggs/ticker/AAPL/prev?adjusted=true');
+    const c = j?.results?.[0]?.c;
+    if (c) appToast(`Massive werkt — AAPL slotkoers $${c}`);
+    else appToast('Verbonden, maar geen koersdata terug', { type: 'warn' });
+  } catch (e) {
+    appToast('Massive-test mislukt: ' + (e.message || 'onbekend'), { type: 'error' });
+  }
 }
 function applyTheme() {
   const t = rawState.settings?.theme || 'auto';

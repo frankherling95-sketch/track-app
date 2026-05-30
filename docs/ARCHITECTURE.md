@@ -50,6 +50,7 @@ renderAll()      // herrendert huidige route
 | `_perfBenchData` | Map | benchmark-reeksen tijdens render |
 | `localStorage[LS_BENCH_PREFIX+sym]` | persistent (4u TTL) | Yahoo koershistorie |
 | `localStorage[LS_FX_CACHE]` | persistent | FX-rates naar EUR |
+| `_mvGrouped` + `localStorage[LS_MV_GROUPED]` | in-mem + persistent (10 min TTL) | Massive grouped-daily map (sym→USD slotkoers) |
 
 ## Routing-patroon
 - `ROUTES` object: `{ key: { title, render, actions } }`. `render` vult `#content`, `actions` levert HTML voor de knop(pen) rechts in de page-head.
@@ -82,7 +83,8 @@ Brede tabellen → op mobiel **cards** i.p.v. horizontale scroll. Patroon:
 - **Pure compute layer** — alle cijfers afgeleid uit transactielog (geen running totals). Maakt Timetravel mogelijk (`getNowISO()`/`_ttDate` als virtuele "nu").
 - **Config-driven kolommen** — `SEC_COLUMNS[]` (key/label/get/fmt/color) drijft tabel + card-detail + kolomkiezer.
 - **Config-driven breakdowns** — `PORT_BREAKDOWNS[]` (sector/branche/type/land/marketcap/...) voor donut.
-- **Adapter per databron** — `refreshTicker()` routeert crypto→CoinGecko, aandeel/ETF→Yahoo; `fxForCurrency()` met transactie-rate → cache-fallback.
+- **Adapter per databron** — `refreshTicker()` routeert crypto→CoinGecko, aandeel/ETF→**Massive→Yahoo** (Massive primair zodra proxy-URL is ingesteld, anders/erbij Yahoo); `fxForCurrency()` met transactie-rate → cache-fallback.
+- **Massive marktdata (via gratis Cloudflare Worker)** — `massiveBase()`/`massiveFetch()`; `getMassiveGroupedMap()` haalt met **1 grouped-call** alle US-slotkoersen (cache `LS_MV_GROUPED`, 10 min) → respecteert de ~5/min rate-limit; `fetchMassiveFx()` (forex), `fetchMassiveOverview()` (sector/marktkap). EOD-data. Élke fout valt stil terug op Yahoo/CoinGecko (verversen faalt nooit zichtbaar). Key staat server-side als Worker-Secret, nooit in de app.
 - **Proxy-chain met cache** — `yahooFetch()` probeert werkende proxy eerst (`LS_YAHOO_PROXY`), valt door 4 proxies.
 - **Static fallback maps** — `STATIC_TICKER_META`, `TICKER_DOMAINS`, `CRYPTO_TO_COINGECKO` voor data die de API's niet leveren.
 
