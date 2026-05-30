@@ -51,3 +51,26 @@ Append-only ADR-stijl log. Oude entries nooit wijzigen.
 **Beslissing**: `.tbl-wrap { overflow-x: auto }` + `.tbl { min-width: 560px }`. Native horizontale scrollbar verschijnt automatisch wanneer nodig.
 
 **Waarom**: Simpeler dan responsive kolom-hiding. Gebruiker ziet altijd alle data, kan scrollen op mobiel. Native scroll-behavior is consistent met platform.
+
+## 2026-05-30 · Massive API als toekomstige primaire databron (via Worker)
+
+**Beslissing**: Massive (massive.com, Polygon-achtige API) wordt de beoogde primaire
+marktdata-bron, MAAR alleen via een gratis Cloudflare Worker proxy — niet direct vanuit
+de browser.
+
+**Waarom**: Massive dekt alles in één bron (koersen, OHLC-historie, dividends, ticker-
+overview met sector/industrie, echte + historische FX, crypto, evt. corporate-events).
+Betrouwbaarder dan de huidige Yahoo-CORS-proxy. Maar het is een server-side API met een
+betaalde key → de statische GitHub-Pages-app mag/kan 'm niet direct aanroepen (CORS +
+key-lek). Een gratis Worker houdt de key geheim, lost CORS op, en `Unified Snapshot`
+laat álle posities in 1 call verversen (binnen gratis rate-limits).
+
+**Architectuur**: App → gratis Cloudflare Worker (`massive-proxy-worker.js`) → Massive.
+Additief: Massive wordt primair zodra een Worker-URL is ingesteld; anders blijft de app
+op Yahoo/CoinGecko draaien (geen regressie).
+
+**Open**: gebruikers-tier bij Massive onbekend (partner-endpoints zoals TMX corporate-
+events/Benzinga zijn vermoedelijk betaald). Exacte endpoint-paden verifiëren via de
+mcp_massive connector vóór de app-integratie. US-data in USD → EUR via Massive-FX.
+
+**Niet doen**: betaalde key direct in de browser of via publieke CORS-proxy zetten (lek).
