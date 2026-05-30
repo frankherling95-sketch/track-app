@@ -1644,6 +1644,11 @@ async function fetchAndCacheFx(currency) {
 }
 function fxForCurrency(currency) {
   if (!currency || currency === 'EUR') return 1;
+  /* HUIDIGE waarde → LIVE FX-koers (cache). De koers van vandaag, niet de aankoop-koers.
+     Kostprijs gebruikt per-transactie tx.fx (in computeHoldings), dat blijft de aankoop-koers. */
+  const cached = fxFromCache(currency);
+  if (cached) return cached;
+  /* Fallback als er nog geen live koers gecached is: meest recente transactie-fx, anders 1. */
   let latest = null, latestDate = '';
   for (const t of rawState.transactions) {
     if (t.currency === currency && t.fx && (t.date || '') > latestDate) { latest = +t.fx; latestDate = t.date; }
@@ -1651,9 +1656,35 @@ function fxForCurrency(currency) {
   for (const d of rawState.dividends) {
     if (d.currency === currency && d.fx && (d.date || '') > latestDate) { latest = +d.fx; latestDate = d.date; }
   }
-  if (latest) return latest;
-  /* Fallback: Yahoo FX-cache (gevuld via refreshAllTickers + on-demand bij TR import) */
-  return fxFromCache(currency) || 1;
+  return latest || 1;
+}
+
+/* Zorg dat er een live FX-koers gecached is voor elke vreemde valuta in de portefeuille/watchlist.
+   Draait bij boot; vult LS_FX_CACHE zodat fxForCurrency klopt (lost "USD als EUR gerekend" op). */
+async function ensureFxRates() {
+  const curs = new Set();
+  rawState.tickers.forEach(t => { if (t.currency && t.currency !== 'EUR') curs.add(t.currency); });
+  let changed = false;
+  for (const cur of curs) {
+    const c = (() => { try { return JSON.parse(localStorage.getItem(LS_FX_CACHE) || '{}')[cur]; } catch (e) { return null; } })();
+    const stale = !c || (Date.now() - (c.ts || 0) > 20 * 3600 * 1000);
+    if (stale) { const r = await fetchAndCacheFx(cur); if (r) changed = true; }
+  }
+  if (changed) renderAll();
+}
+
+/* Historische FX-reeks <CUR>EUR=X (dag-koersen), gecached. Voor accurate grafiek-conversie. */
+async function fetchFxHistory(currency, range = '2y') {
+  if (!currency || currency === 'EUR') return null;
+  const data = await fetchBenchmarkHistory(`${currency}EUR=X`, range);
+  return (data && data.length) ? data : null;
+}
+/* Dichtstbijzijnde FX-koers op of vóór isoDate; anders oudste/1. */
+function fxAtDate(fxHist, isoDate, fallback) {
+  if (!fxHist || !fxHist.length) return fallback != null ? fallback : 1;
+  let rate = fxHist[0].close;
+  for (const p of fxHist) { if (p.date <= isoDate) rate = p.close; else break; }
+  return rate || (fallback != null ? fallback : 1);
 }
 
 /* Compute current holdings from transactions. Respects timetravel cutoff. */
@@ -3712,10 +3743,20 @@ async function drawStockDetailChart(symbol) {
     wrap.innerHTML = '<div class="text-muted" style="padding:30px; text-align:center;">Geen koersdata beschikbaar voor deze periode</div>';
     return;
   }
-  /* Valuta-conversie: native koersen → weergavevaluta (EUR default).
-     Crypto-historie is al EUR (mult=1). Huidige FX toegepast op historie (consistent met de rest van de app). */
-  const _sdDisp = sdDisplay(getTicker(symbol), _sdMeta);
-  if (_sdDisp.mult !== 1) quotes = quotes.map(q => ({ ...q, close: q.close * _sdDisp.mult }));
+  /* Valuta-conversie naar weergavevaluta. EUR-modus gebruikt HISTORISCHE FX per dag
+     (accuraat, ≈ Trade Republic's EUR-koers). Crypto-historie is al EUR. */
+  const _sdTk = getTicker(symbol);
+  const _sdDisp = sdDisplay(_sdTk, _sdMeta);
+  const _sdNat = sdNativeCur(_sdTk, _sdMeta);
+  if (_sdDisp.eur && _sdNat !== 'EUR') {
+    const fxHist = await fetchFxHistory(_sdNat, '5y');
+    const liveFx = fxForCurrency(_sdNat);
+    quotes = quotes.map(q => {
+      const day = (q.date || '').slice(0, 10);
+      const r = fxHist ? fxAtDate(fxHist, day, liveFx) : liveFx;
+      return { ...q, close: q.close * r };
+    });
+  }
   /* Draw SVG line */
   const W = 640, H = 180, P = 32;
   const max = Math.max(...quotes.map(q => q.close));
@@ -6608,6 +6649,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   applyTimetravelFromUrl();
   renderAll();
   await loadGist();
+  ensureFxRates();          // live FX-koersen garanderen → correcte EUR-waardering
   autoRefreshOnBoot();
   setupWatchlistAutoRefresh();
   /* Historische koersen op de achtergrond laden voor accurate YTD + grafieken */
