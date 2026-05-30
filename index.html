@@ -3554,16 +3554,17 @@ function renderStockDetailFull(t, meta) {
 }
 
 function renderStockDetailHeader(t, meta) {
-  const fxRate = fxForCurrency(t.currency || meta?.currency || 'EUR');
+  const disp = sdDisplay(t, meta);
   const livePrice = meta?.price ?? t.price;
-  const priceEur = livePrice != null ? livePrice * fxRate : null;
+  const priceDisp = livePrice != null ? livePrice * disp.mult : null;
   const prevClose = meta?.previousClose;
   let changeAbs = null, changePct = null;
   if (livePrice != null && prevClose != null && prevClose > 0) {
-    changeAbs = (livePrice - prevClose) * fxRate;
+    changeAbs = (livePrice - prevClose) * disp.mult;
     changePct = ((livePrice - prevClose) / prevClose) * 100;
   }
   const up = (changeAbs ?? 0) >= 0;
+  const fmtDisp = v => disp.eur ? fmtEUR(v) : (fmtNum(v, 2) + ' ' + disp.label);
   return `<div class="sd-head">
     ${brandLogoHTML(t)}
     <div style="min-width:0;">
@@ -3576,24 +3577,23 @@ function renderStockDetailHeader(t, meta) {
       </div>
     </div>
     <div class="sd-price-block">
-      <div class="sd-price">${priceEur != null ? fmtEUR(priceEur) : '—'}</div>
-      ${changePct != null ? `<div class="sd-change ${up ? 'pos' : 'neg'}">${up ? '▲' : '▼'} ${up ? '+' : ''}${fmtEUR(changeAbs)} (${up ? '+' : ''}${fmtPct(changePct, 2)})</div>` : ''}
+      <div class="sd-price">${priceDisp != null ? fmtDisp(priceDisp) : '—'}</div>
+      ${changePct != null ? `<div class="sd-change ${up ? 'pos' : 'neg'}">${up ? '▲' : '▼'} ${up ? '+' : ''}${fmtDisp(changeAbs)} (${up ? '+' : ''}${fmtPct(changePct, 2)})</div>` : ''}
     </div>
   </div>`;
 }
 
 function renderStockDetailStats(t, meta) {
-  const cur = t.currency || meta?.currency || 'EUR';
-  const fxRate = fxForCurrency(cur);
-  const eurOrNative = (v) => v != null ? fmtNum(v, 2) + ' ' + cur : '—';
+  const disp = sdDisplay(t, meta);
+  const v2 = (v) => v != null ? fmtNum(v * disp.mult, 2) + ' ' + disp.label : '—';
   const stats = [
-    { label: 'Dag laag', val: eurOrNative(meta?.dayLow) },
-    { label: 'Dag hoog', val: eurOrNative(meta?.dayHigh) },
-    { label: '52W laag', val: eurOrNative(meta?.weekLow52) },
-    { label: '52W hoog', val: eurOrNative(meta?.weekHigh52) },
+    { label: 'Dag laag', val: v2(meta?.dayLow) },
+    { label: 'Dag hoog', val: v2(meta?.dayHigh) },
+    { label: '52W laag', val: v2(meta?.weekLow52) },
+    { label: '52W hoog', val: v2(meta?.weekHigh52) },
     { label: 'Volume', val: meta?.volume ? fmtNum(meta.volume, 0) : '—' },
-    { label: 'Market cap', val: meta?.marketCap || t.marketCap ? fmtCompactCurrency((meta?.marketCap || t.marketCap) * (cur === 'EUR' ? 1 : fxRate)) : '—' },
-    { label: 'Dividend/jr', val: t.dps ? fmtNum(t.dps, 2) + ' ' + cur : '—' },
+    { label: 'Market cap', val: (meta?.marketCap || t.marketCap) ? fmtCompactCurrency((meta?.marketCap || t.marketCap) * fxForCurrency(sdNativeCur(t, meta))) : '—' },
+    { label: 'Dividend/jr', val: v2(t.dps) },
     { label: 'Yield', val: (t.dps && t.price) ? fmtPct((t.dps / t.price) * 100, 2) : '—' },
   ];
   return `<div class="sd-stats">${stats.map(s => `
@@ -3613,9 +3613,17 @@ function fmtCompactCurrency(eur) {
 }
 
 function renderStockDetailChartSection() {
+  const t = getTicker(_sdSymbol);
+  const nat = sdNativeCur(t, _sdMeta);
+  /* Valuta-toggle alleen tonen als native ≠ EUR (anders zinloos) */
+  const curToggle = nat !== 'EUR' ? `<div class="seg" style="margin-left:auto;">
+      <button class="seg-btn ${_sdCurrency === 'eur' ? 'active' : ''}" onclick="setSdCurrency('eur')">EUR</button>
+      <button class="seg-btn ${_sdCurrency === 'native' ? 'active' : ''}" onclick="setSdCurrency('native')">${escapeHtml(nat)}</button>
+    </div>` : '';
   return `<div class="sd-chart-wrap">
     <div class="sd-chart-toolbar">
       ${SD_TIMEFRAMES.map(tf => `<button class="sd-chart-pill ${tf.key === _sdTimeframe ? 'active' : ''}" onclick="setSdTimeframe('${tf.key}')">${tf.label}</button>`).join('')}
+      ${curToggle}
     </div>
     <div id="sdChart" style="min-height:160px;">
       <div class="text-muted" style="padding:30px; text-align:center;">Chart laden…</div>
@@ -3704,6 +3712,10 @@ async function drawStockDetailChart(symbol) {
     wrap.innerHTML = '<div class="text-muted" style="padding:30px; text-align:center;">Geen koersdata beschikbaar voor deze periode</div>';
     return;
   }
+  /* Valuta-conversie: native koersen → weergavevaluta (EUR default).
+     Crypto-historie is al EUR (mult=1). Huidige FX toegepast op historie (consistent met de rest van de app). */
+  const _sdDisp = sdDisplay(getTicker(symbol), _sdMeta);
+  if (_sdDisp.mult !== 1) quotes = quotes.map(q => ({ ...q, close: q.close * _sdDisp.mult }));
   /* Draw SVG line */
   const W = 640, H = 180, P = 32;
   const max = Math.max(...quotes.map(q => q.close));
